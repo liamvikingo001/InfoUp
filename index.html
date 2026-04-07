@@ -1632,7 +1632,21 @@
                 if (subOp === "NUEVO") {
                     const idAir = document.getElementById('new_id_air').value.trim();
                     if (confirm(`¿Ingresar nuevo aireador ${idAir}?`)) {
-                        datosAires.push([idAir, document.getElementById('new_serie').value, document.getElementById('new_marca').value, document.getElementById('new_modelo').value, document.getElementById('new_ubicacion').value, document.getElementById('new_tipo').value, lat, lon]);
+                        // Modificado para registrar fecha en Col K (index 10) y hora en Col L (index 11)
+                        datosAires.push([
+                            idAir, 
+                            document.getElementById('new_serie').value, 
+                            document.getElementById('new_marca').value, 
+                            document.getElementById('new_modelo').value, 
+                            document.getElementById('new_ubicacion').value, 
+                            document.getElementById('new_tipo').value, 
+                            lat, 
+                            lon, 
+                            "", // Col I
+                            "", // Col J
+                            fechaActualFormat, // Col K
+                            horaActualFormat   // Col L
+                        ]);
                         await aplicarGuardado("Aireador registrado.", true);
                     }
                 }
