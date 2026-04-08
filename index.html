@@ -178,6 +178,50 @@
         let wb; 
         let datosAires = []; 
 
+        // --- NUEVO: GUARDAR CÓDIGO EN MEMORIA INTERNA ---
+        function guardarCodigoEnMemoria() {
+            if ('caches' in window) {
+                // Limpiamos la URL para evitar guardar parámetros temporales
+                const cleanUrl = window.location.href.split('#')[0].split('?')[0];
+                caches.open('app-aireadores-core-v1').then(cache => {
+                    cache.addAll([
+                        cleanUrl,
+                        'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js' // Librería Excel en caché
+                    ]).then(() => {
+                        console.log("💾 Código del sistema y librerías guardados en memoria interna.");
+                    });
+                }).catch(e => console.warn("Cache API no disponible.", e));
+            }
+        }
+
+        // --- NUEVO: SERVICE WORKER PARA RECUPERAR CÓDIGO AL CAMBIAR PESTAÑA ---
+        function instalarServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                const swCode = `
+                    const CACHE_NAME = 'app-aireadores-core-v1';
+                    self.addEventListener('install', e => self.skipWaiting());
+                    self.addEventListener('activate', e => self.clients.claim());
+                    self.addEventListener('fetch', e => {
+                        e.respondWith(
+                            caches.match(e.request).then(response => {
+                                // Devuelve desde la memoria si existe, sino busca en internet
+                                return response || fetch(e.request);
+                            })
+                        );
+                    });
+                `;
+                try {
+                    const blob = new Blob([swCode], { type: 'application/javascript' });
+                    const swUrl = URL.createObjectURL(blob);
+                    navigator.serviceWorker.register(swUrl).then(() => {
+                        console.log("⚙️ Service Worker activo: La app resistirá recargas sin internet.");
+                    }).catch(err => {
+                        console.log("Service Worker requiere entorno seguro (HTTPS) o servidor local.", err);
+                    });
+                } catch(e) {}
+            }
+        }
+
         // --- CARGA DE PISCINAS ESTÁTICAS ---
         function cargarPiscinasPorDefecto() {
             const select = document.getElementById('new_ubicacion');
@@ -284,6 +328,9 @@
         });
 
         async function iniciarSistema() {
+            guardarCodigoEnMemoria(); // Llama a la nueva función
+            instalarServiceWorker();  // Instala el recolector de pestañas offline
+
             cargarPiscinasPorDefecto(); 
             restaurarBorradorFormulario(); 
             gestionarGPSPersistente(); 
