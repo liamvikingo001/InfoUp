@@ -2,11 +2,18 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Aireadores">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#4a76c0">
+    
     <title>Registro_Aireadores</title>
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="apple-touch-icon" href="logo.png">
-    <meta name="theme-color" content="#4a76c0">
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
@@ -20,6 +27,9 @@
             overflow: hidden; 
             background-color: #4a76c0; 
             font-family: Arial, sans-serif; 
+            /* Bloquea el "Pull to refresh" y los gestos de retroceso laterales */
+            overscroll-behavior-y: none;
+            overscroll-behavior-x: none;
         }
 
         .container { 
@@ -28,6 +38,7 @@
             height: 100%; 
             margin: 0 auto; 
             padding: 10px; 
+            padding-bottom: env(safe-area-inset-bottom, 20px);
             display: flex; 
             flex-direction: column; 
             color: white; 
@@ -50,6 +61,7 @@
             margin-top: 5px;
             margin-bottom: 10px; 
             padding: 15px 10px;
+            overscroll-behavior: contain;
         }
 
         .save-btn { 
@@ -69,6 +81,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            touch-action: manipulation;
         }
 
         /* --- ESTILOS DECORATIVOS --- */
@@ -83,7 +96,7 @@
         .grid-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; width: 100%; }
         .label-box { border: 1px solid white; padding: 8px; font-size: 14px; font-weight: bold; text-transform: uppercase; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.1); height: 40px; }
         
-        select, input[type="text"] { width: 100%; padding: 8px; border: 1px solid #1a3a70; background-color: white; height: 45px; font-weight: bold; font-size: 16px; color: black; }
+        select, input[type="text"] { width: 100%; padding: 8px; border: 1px solid #1a3a70; background-color: white; height: 45px; font-weight: bold; font-size: 16px; color: black; touch-action: manipulation; }
         
         .form-mantenimiento-row { display: grid; grid-template-columns: 1fr 2fr; margin-bottom: 12px; gap: 2px; }
         .form-label { background-color: #4a76c0; border: 1px solid white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; text-transform: uppercase; }
@@ -178,15 +191,44 @@
         let wb; 
         let datosAires = []; 
 
-        // --- NUEVO: GUARDAR CÓDIGO EN MEMORIA INTERNA ---
+        // --- BLOQUEO DEL BOTÓN DE RETROCESO ---
+        function anularBotonAtras() {
+            window.history.pushState(null, null, window.location.href);
+            window.addEventListener('popstate', function(event) {
+                window.history.pushState(null, null, window.location.href);
+            });
+        }
+
+        // --- MANIFEST DINÁMICO PARA INSTALACIÓN A PANTALLA COMPLETA ---
+        function instalarManifestStandalone() {
+            const manifestData = {
+                "name": "Registro Aireadores",
+                "short_name": "Aireadores",
+                "start_url": window.location.href.split('?')[0],
+                "display": "standalone",
+                "background_color": "#4a76c0",
+                "theme_color": "#4a76c0",
+                "orientation": "portrait"
+            };
+            
+            const stringManifest = JSON.stringify(manifestData);
+            const blob = new Blob([stringManifest], {type: 'application/json'});
+            const manifestURL = URL.createObjectURL(blob);
+            
+            const link = document.createElement('link');
+            link.rel = 'manifest';
+            link.href = manifestURL;
+            document.head.appendChild(link);
+        }
+
+        // --- GUARDAR CÓDIGO EN MEMORIA INTERNA ---
         function guardarCodigoEnMemoria() {
             if ('caches' in window) {
-                // Limpiamos la URL para evitar guardar parámetros temporales
                 const cleanUrl = window.location.href.split('#')[0].split('?')[0];
                 caches.open('app-aireadores-core-v1').then(cache => {
                     cache.addAll([
                         cleanUrl,
-                        'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js' // Librería Excel en caché
+                        'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js' 
                     ]).then(() => {
                         console.log("💾 Código del sistema y librerías guardados en memoria interna.");
                     });
@@ -194,7 +236,7 @@
             }
         }
 
-        // --- NUEVO: SERVICE WORKER PARA RECUPERAR CÓDIGO AL CAMBIAR PESTAÑA ---
+        // --- SERVICE WORKER ---
         function instalarServiceWorker() {
             if ('serviceWorker' in navigator) {
                 const swCode = `
@@ -204,7 +246,6 @@
                     self.addEventListener('fetch', e => {
                         e.respondWith(
                             caches.match(e.request).then(response => {
-                                // Devuelve desde la memoria si existe, sino busca en internet
                                 return response || fetch(e.request);
                             })
                         );
@@ -214,15 +255,12 @@
                     const blob = new Blob([swCode], { type: 'application/javascript' });
                     const swUrl = URL.createObjectURL(blob);
                     navigator.serviceWorker.register(swUrl).then(() => {
-                        console.log("⚙️ Service Worker activo: La app resistirá recargas sin internet.");
-                    }).catch(err => {
-                        console.log("Service Worker requiere entorno seguro (HTTPS) o servidor local.", err);
-                    });
+                        console.log("⚙️ Service Worker activo.");
+                    }).catch(err => console.log("SW error", err));
                 } catch(e) {}
             }
         }
 
-        // --- CARGA DE PISCINAS ESTÁTICAS ---
         function cargarPiscinasPorDefecto() {
             const select = document.getElementById('new_ubicacion');
             select.innerHTML = '<option value="">-- SELECCIONE --</option>';
@@ -239,7 +277,6 @@
             }
         }
 
-        // --- FUNCIONES PARA AUTO-GUARDADO DE BORRADORES ---
         function guardarBorradorFormulario() {
             const borrador = {
                 marca: document.getElementById('new_marca').value,
@@ -269,7 +306,7 @@
             }
         }
 
-        // --- PROTECCIÓN ESTRICTA CONTRA CIERRES Y RECARGAS ---
+        // --- PROTECCIÓN CONTRA RECARGAS ---
         window.addEventListener('keydown', (e) => {
             const pendientes = localStorage.getItem('pendingPayloads');
             const hayPendientes = pendientes && JSON.parse(pendientes).length > 0;
@@ -328,14 +365,15 @@
         });
 
         async function iniciarSistema() {
-            guardarCodigoEnMemoria(); // Llama a la nueva función
-            instalarServiceWorker();  // Instala el recolector de pestañas offline
+            anularBotonAtras(); 
+            instalarManifestStandalone(); 
+            guardarCodigoEnMemoria(); 
+            instalarServiceWorker();  
 
             cargarPiscinasPorDefecto(); 
             restaurarBorradorFormulario(); 
             gestionarGPSPersistente(); 
             
-            // Lógica OFFLINE-FIRST: Cargar desde la memoria local inmediatamente
             const localData = localStorage.getItem('localDB');
             const statusDiv = document.getElementById('serverStatus');
             
@@ -348,7 +386,6 @@
                 statusDiv.className = "server-status-bar server-offline";
             }
 
-            // Si hay internet, intentar sincronizar pendientes primero y luego actualizar base local
             if (navigator.onLine) {
                 const pendientes = localStorage.getItem('pendingPayloads');
                 if (pendientes && JSON.parse(pendientes).length > 0) {
@@ -378,11 +415,11 @@
                             headers: { "Content-Type": "text/plain" },
                             body: JSON.stringify(item)
                         });
-                        cola.shift(); // Elimina el elemento subido de la cola
+                        cola.shift(); 
                         localStorage.setItem('pendingPayloads', JSON.stringify(cola));
                     } catch (e) {
                         errores++;
-                        break; // Sale del bucle si hay error para reintentar luego
+                        break; 
                     }
                 }
 
@@ -415,7 +452,7 @@
                     }
                 }
             } catch (e) {
-                console.warn("Actualización en segundo plano falló, operando con caché local.");
+                console.warn("Actualización en segundo plano falló.");
             }
         }
 
@@ -553,10 +590,8 @@
                     payload[name] = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true });
                 });
 
-                // 1. Guardar SIEMPRE en memoria local primero
                 localStorage.setItem('localDB', JSON.stringify(payload));
 
-                // 2. Comprobar internet para enviar o encolar
                 if (navigator.onLine) {
                     try {
                         await fetch(SCRIPT_URL, {
@@ -567,7 +602,6 @@
                         });
                         if(msj) alert(msj + "\nSincronizado inmediatamente con la nube.");
                     } catch (e) {
-                        // Si falla la red durante el fetch, se encola localmente
                         encolarCargaLocal(payload, msj);
                     }
                 } else {
