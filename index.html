@@ -27,7 +27,7 @@
             overflow: hidden; 
             background-color: #4a76c0; 
             font-family: Arial, sans-serif; 
-            /* Bloquea el "Pull to refresh" y los gestos de retroceso laterales */
+            /* NUEVO: Bloquea el "Pull to refresh" y los gestos de retroceso laterales */
             overscroll-behavior-y: none;
             overscroll-behavior-x: none;
         }
@@ -38,6 +38,7 @@
             height: 100%; 
             margin: 0 auto; 
             padding: 10px; 
+            /* padding-bottom extendido por si el teléfono tiene "notch" abajo */
             padding-bottom: env(safe-area-inset-bottom, 20px);
             display: flex; 
             flex-direction: column; 
@@ -61,6 +62,7 @@
             margin-top: 5px;
             margin-bottom: 10px; 
             padding: 15px 10px;
+            /* Permite el scroll solo adentro del formulario, sin arrastrar toda la app */
             overscroll-behavior: contain;
         }
 
@@ -81,6 +83,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            /* Previene el zoom al hacer tap repetidamente */
             touch-action: manipulation;
         }
 
@@ -191,15 +194,20 @@
         let wb; 
         let datosAires = []; 
 
-        // --- BLOQUEO DEL BOTÓN DE RETROCESO ---
+        // --- NUEVO: BLOQUEO DEL BOTÓN DE RETROCESO ---
         function anularBotonAtras() {
+            // Empuja el estado actual al historial
             window.history.pushState(null, null, window.location.href);
+            
+            // Si el usuario presiona "Atrás", interceptamos y volvemos a empujar el estado
             window.addEventListener('popstate', function(event) {
                 window.history.pushState(null, null, window.location.href);
+                // Opcional: Descomentar para mostrar alerta
+                // alert("⚠️ Por seguridad de los datos, no se permite usar el botón de atrás.");
             });
         }
 
-        // --- MANIFEST DINÁMICO PARA INSTALACIÓN A PANTALLA COMPLETA ---
+        // --- NUEVO: MANIFEST DINÁMICO PARA INSTALACIÓN A PANTALLA COMPLETA ---
         function instalarManifestStandalone() {
             const manifestData = {
                 "name": "Registro Aireadores",
@@ -221,7 +229,6 @@
             document.head.appendChild(link);
         }
 
-        // --- GUARDAR CÓDIGO EN MEMORIA INTERNA ---
         function guardarCodigoEnMemoria() {
             if ('caches' in window) {
                 const cleanUrl = window.location.href.split('#')[0].split('?')[0];
@@ -236,7 +243,6 @@
             }
         }
 
-        // --- SERVICE WORKER ---
         function instalarServiceWorker() {
             if ('serviceWorker' in navigator) {
                 const swCode = `
@@ -306,7 +312,6 @@
             }
         }
 
-        // --- PROTECCIÓN CONTRA RECARGAS ---
         window.addEventListener('keydown', (e) => {
             const pendientes = localStorage.getItem('pendingPayloads');
             const hayPendientes = pendientes && JSON.parse(pendientes).length > 0;
@@ -365,8 +370,10 @@
         });
 
         async function iniciarSistema() {
+            // EJECUTA LAS DOS NUEVAS FUNCIONES AL ABRIR LA APP
             anularBotonAtras(); 
             instalarManifestStandalone(); 
+
             guardarCodigoEnMemoria(); 
             instalarServiceWorker();  
 
