@@ -424,6 +424,58 @@
             return mensaje;
         });
 
+        // --- PERSISTENCIA CONTRA CIERRE EN SEGUNDO PLANO (MODO OFFLINE REFORZADO) ---
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden' && currentUserName !== "") {
+                const estado = {
+                    userRole: currentUserRole,
+                    userName: currentUserName,
+                    realName: nombreRealOperador,
+                    op: document.getElementById('operacionSelect').value,
+                    pis: document.getElementById('piscinaSelect').value
+                };
+                localStorage.setItem('sesionActiva', JSON.stringify(estado));
+                localStorage.setItem('colaTemporal', JSON.stringify(colaDeRegistros));
+                localStorage.setItem('colaHab', JSON.stringify(colaHabilitacion));
+                localStorage.setItem('cambiosAsig', JSON.stringify(cambiosAsignacion));
+                localStorage.setItem('piscinasProg', JSON.stringify(piscinasProgramadas));
+            }
+        });
+
+        function intentarRestaurarSesion() {
+            const estadoStr = localStorage.getItem('sesionActiva');
+            if (estadoStr) {
+                try {
+                    const estado = JSON.parse(estadoStr);
+                    currentUserRole = estado.userRole;
+                    currentUserName = estado.userName;
+                    nombreRealOperador = estado.realName;
+
+                    if (localStorage.getItem('colaTemporal')) colaDeRegistros = JSON.parse(localStorage.getItem('colaTemporal'));
+                    if (localStorage.getItem('colaHab')) colaHabilitacion = JSON.parse(localStorage.getItem('colaHab'));
+                    if (localStorage.getItem('cambiosAsig')) cambiosAsignacion = JSON.parse(localStorage.getItem('cambiosAsig'));
+                    if (localStorage.getItem('piscinasProg')) piscinasProgramadas = JSON.parse(localStorage.getItem('piscinasProg'));
+
+                    aplicarPermisosRol(currentUserRole);
+                    actualizarSelectsGlobales();
+
+                    document.getElementById('loginInterface').classList.add('hidden');
+                    document.getElementById('appInterface').classList.remove('hidden');
+
+                    if (estado.op) {
+                        document.getElementById('operacionSelect').value = estado.op;
+                        cambiarVista();
+                        if (estado.pis) {
+                            document.getElementById('piscinaSelect').value = estado.pis;
+                            cambiarPiscina();
+                        }
+                    }
+                    return true;
+                } catch(e) { console.error("Error restaurando sesión", e); }
+            }
+            return false;
+        }
+
         history.pushState(null, null, location.href);
         window.onpopstate = function () {
             history.go(1);
@@ -452,11 +504,15 @@
             statusDiv.className = "server-status-bar server-offline";
         });
 
-        function iniciarSistema() {
+        async function iniciarSistema() {
             gestionarGPSPersistente();
-            cargarDatos();
-            document.getElementById('loginInterface').classList.remove('hidden');
-            document.getElementById('appInterface').classList.add('hidden');
+            await cargarDatos();
+            
+            // Si no logra restaurar una sesión previa abierta, muestra el login normal
+            if (!intentarRestaurarSesion()) {
+                document.getElementById('loginInterface').classList.remove('hidden');
+                document.getElementById('appInterface').classList.add('hidden');
+            }
         }
 
         async function autoSyncPendientes() {
