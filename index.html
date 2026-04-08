@@ -19,10 +19,10 @@
         * { box-sizing: border-box; }
         
         html, body { 
-            height: 100%; /* Fuerza la altura al 100% de la ventana visible */
+            height: 100%; 
             margin: 0; 
             padding: 0;
-            overflow: hidden; /* Evita que toda la página haga scroll, solo las listas */
+            overflow: hidden; 
             background-color: #4a76c0; 
             font-family: Arial, sans-serif; 
         }
@@ -30,46 +30,33 @@
         .container { 
             width: 100%; 
             max-width: 480px; 
-            height: 100%; /* Ocupa el 100% del body */
-            margin: 0 auto; /* Centrado horizontal */
+            height: 100%; 
+            margin: 0 auto; 
             padding: 10px; 
-            
-            /* AQUÍ ESTÁ EL ESPACIO INFERIOR DE 10PX QUE PEDISTE */
             padding-bottom: 10px; 
-            
             display: flex; 
-            flex-direction: column; /* Organiza verticalmente */
+            flex-direction: column; 
             color: white; 
         }
 
         /* --- ELEMENTOS DE LA INTERFAZ --- */
-        
-        /* ÁREA SUPERIOR (GPS, INPUTS, ETC) - No crece, tamaño fijo */
-        .gps-status-bar, .server-status-bar, .grid-row, #loginInterface, #contadoresIndividuales {
+        .gps-status-bar, .server-status-bar, .grid-row, #contadoresIndividuales {
             flex-shrink: 0; 
         }
 
-        /* ÁREA DE CONTENIDO PRINCIPAL (LISTAS) - ESTA ES LA QUE CRECE */
         .content-area { 
             background-color: #1a3a70; 
             border: 1px solid white; 
             border-radius: 5px; 
-            
-            /* FLEXIBILIDAD */
-            flex: 1; /* Ocupa todo el espacio disponible sobrante */
+            flex: 1; 
             display: flex; 
             flex-direction: column; 
-            
-            /* SCROLL INTERNO */
             overflow-y: auto; 
-            min-height: 0; /* Fix para Firefox/Flexbox */
-            
-            /* AQUÍ ESTÁ EL ESPACIO DE 10PX ANTES DEL BOTÓN */
+            min-height: 0; 
             margin-top: 5px;
             margin-bottom: 10px; 
         }
 
-        /* BOTÓN DE GUARDAR - SIEMPRE VISIBLE AL FINAL SI NO ESTÁ HIDDEN */
         .save-btn { 
             background-color: #ffffff; 
             color: #4e7a3a; 
@@ -82,56 +69,37 @@
             cursor: pointer; 
             text-transform: uppercase; 
             box-shadow: 0 -4px 15px rgba(0,0,0,0.3); 
-            
-            /* COMPORTAMIENTO FLEX */
-            flex-shrink: 0; /* No permitimos que se encoja */
-            height: 50px;   /* Altura fija asegurada */
+            flex-shrink: 0; 
+            height: 50px;   
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
         /* --- ESTILOS DECORATIVOS --- */
-        .gps-status-bar {
-            background: rgba(0,0,0,0.5); color: #00ff2b; font-size: 10px; padding: 5px; border-radius: 5px; margin-bottom: 5px; display: flex; justify-content: space-between; border: 1px solid rgba(255,255,255,0.2);
-        }
+        .gps-status-bar { background: rgba(0,0,0,0.5); color: #00ff2b; font-size: 10px; padding: 5px; border-radius: 5px; margin-bottom: 5px; display: flex; justify-content: space-between; border: 1px solid rgba(255,255,255,0.2); }
         .gps-searching { color: #ffcc00; }
-
-        .server-status-bar {
-            padding: 12px; margin-bottom: 8px; border-radius: 5px; font-weight: bold; font-size: 14px; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.3); transition: background-color 0.3s ease;
-        }
+        .server-status-bar { padding: 12px; margin-bottom: 8px; border-radius: 5px; font-weight: bold; font-size: 14px; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.3); transition: background-color 0.3s ease; }
         .server-loading { background-color: #ff9800; color: white; }
         .server-online { background-color: #28a745; color: white; }
         .server-offline { background-color: #dc3545; color: white; }
         .server-syncing { background-color: #007bff; color: white; }
-
         .grid-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; width: 100%; }
         .label-box { border: 1px solid white; padding: 8px; font-size: 13px; font-weight: bold; text-transform: uppercase; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.1); height: 40px; }
-        
         select, input[type="time"], input[type="text"], input[type="date"], input[type="password"], textarea { width: 100%; padding: 8px; border: 1px solid #1a3a70; background-color: white; height: 40px; font-weight: bold; font-size: 16px; color: black; }
-        
-        .login-label { font-size: 18px; font-weight: bold; color: white; text-transform: uppercase; margin-top: 20px; margin-bottom: 5px; border: 1px solid white; padding: 5px; background: rgba(255,255,255,0.2); }
-        .login-input { border: 2px solid #1a3a70; text-align: center; }
-        .btn-ingresar { background-color: #70ad47; color: white; font-size: 20px; font-weight: bold; padding: 15px; width: 100%; border: 1px solid #000; border-radius: 8px; margin-top: 30px; cursor: pointer; text-transform: uppercase; }
-
         .motivo-container { margin-top: 10px; background: #1a3a70; border: 1px solid white; padding: 10px; border-radius: 5px; width: 100%; }
         .motivo-header { background: #4a76c0; padding: 10px; font-weight: bold; font-size: 16px; margin-bottom: 10px; text-transform: uppercase; }
         textarea#motivoTraslado { height: 80px; resize: none; text-transform: uppercase; }
-
         .counter-container { display: flex; justify-content: space-between; margin: 10px 0; gap: 5px; }
         .counter-box { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; font-weight: bold; }
         .count-value { background-color: #1a3a70; border: 1px solid white; padding: 5px; color: #00ff2b; width: 100%; text-align: center; border-radius: 4px; font-size: 16px; }
-        
         .fixed-header-row { display: grid; background-color: #4a76c0; border-bottom: 1px solid white; flex-shrink: 0; }
         .header-item { color: white; padding: 8px; font-weight: bold; border: 0.2px solid rgba(255,255,255,0.3); text-transform: uppercase; font-size: 11px; }
-        
         .scrollable-list { overflow-y: auto; flex-grow: 1; width: 100%; background-color: #1a3a70; -webkit-overflow-scrolling: touch; padding-bottom: 10px; }
-        
         .dashboard-view { display: flex; flex-direction: column; gap: 10px; padding: 10px; overflow-y: auto; flex-grow: 1; }
         .chart-card { background: white; border: 1px solid #bbb; padding: 10px; display: flex; flex-direction: column; align-items: center; position: relative; border-radius: 4px; flex-shrink: 0; }
         .chart-title { font-size: 15px; font-weight: bold; color: #1a3a70; margin-bottom: 5px; text-transform: uppercase; }
         .canvas-container { width: 100%; height: 140px; position: relative; }
-        
         .badge { position: absolute; bottom: 40px; border: 2px solid red; background: white; color: black; padding: 3px 0; font-weight: bold; font-size: 15px; z-index: 10; width: 50px; text-align: center; }
         .badge-left { left: 15px; }
         .badge-right { right: 15px; }
@@ -210,26 +178,13 @@
             <div id="txtFecha" class="label-box">--/--/----</div>
         </div>
 
-        <div id="loginInterface">
-            <div class="login-label">USUARIO</div>
-            <input type="text" id="txtUsuario" class="login-input">
-            
-            <div class="login-label">CONTRASEÑA</div>
-            <input type="password" id="txtPassword" class="login-input">
-            
-            <button class="btn-ingresar" onclick="validarLogin()">INGRESAR</button>
-            <div style="margin-top:20px; font-size:12px; color:#ccc;">ESPERE A QUE EL SERVIDOR ESTÉ "OK" ANTES DE INGRESAR</div>
-        </div>
-
         <div id="appInterface" class="hidden" style="width:100%; display:flex; flex-direction:column; flex: 1; min-height:0;">
             
             <div class="grid-row">
                 <div class="label-box">OPERACION</div>
                 <select id="operacionSelect" onchange="cambiarVista()" disabled>
                     <option value=""></option>
-                    
                    <option value="MANTENIMIENTO" class="op-full">MODULO DE MANTENIMIENTO</option>
-                  
                 </select>
             </div>
 
@@ -247,7 +202,6 @@
                 <select id="mantenimientoSubSelect" onchange="cambiarSubActividadMantenimiento()">
                     <option value=""></option>
                     <option value="NUEVO">INGRESAR NUEVO AIREADOR</option>
-                 
                 </select>
             </div>
 
@@ -459,7 +413,7 @@
                     aplicarPermisosRol(currentUserRole);
                     actualizarSelectsGlobales();
 
-                    document.getElementById('loginInterface').classList.add('hidden');
+                    // Se eliminaron referencias a loginInterface para no causar error
                     document.getElementById('appInterface').classList.remove('hidden');
 
                     if (estado.op) {
@@ -504,15 +458,30 @@
             statusDiv.className = "server-status-bar server-offline";
         });
 
+        // MODIFICACIÓN PRINCIPAL AQUÍ
         async function iniciarSistema() {
             gestionarGPSPersistente();
             await cargarDatos();
             
-            // Si no logra restaurar una sesión previa abierta, muestra el login normal
-            if (!intentarRestaurarSesion()) {
-                document.getElementById('loginInterface').classList.remove('hidden');
-                document.getElementById('appInterface').classList.add('hidden');
-            }
+            // Intentamos restaurar para recuperar colas temporales si existen
+            intentarRestaurarSesion();
+
+            // Asignamos un usuario por defecto para evadir el inicio de sesión
+            currentUserRole = "SUPERVISOR";
+            currentUserName = "MODO_OFFLINE";
+            nombreRealOperador = "OPERADOR LOCAL";
+
+            aplicarPermisosRol(currentUserRole);
+            actualizarSelectsGlobales();
+
+            // Mostramos la interfaz de la app
+            document.getElementById('appInterface').classList.remove('hidden');
+
+            // Forzamos ir a la vista de "Ingresar Nuevo Aireador" siempre al iniciar
+            document.getElementById('operacionSelect').value = "MANTENIMIENTO";
+            cambiarVista();
+            document.getElementById('mantenimientoSubSelect').value = "NUEVO";
+            cambiarSubActividadMantenimiento();
         }
 
         async function autoSyncPendientes() {
@@ -757,57 +726,6 @@
             actualizarGraficos();
         }
 
-        function validarLogin() {
-            if (!wb || !wb.Sheets["DB"]) {
-                alert("DATOS NO CARGADOS.\nEspere a que el servidor indique 'OK'.");
-                return;
-            }
-
-            const user = document.getElementById('txtUsuario').value.trim();
-            const pass = document.getElementById('txtPassword').value.trim();
-
-            if (user === "" || pass === "") {
-                alert("INGRESE USUARIO Y CONTRASEÑA");
-                return;
-            }
-
-            const sheetDB = wb.Sheets["DB"];
-            const datosDB = XLSX.utils.sheet_to_json(sheetDB, { header: 1, raw: false });
-
-            let usuarioValido = false;
-            let rolUsuario = "";
-            let nombreAsignado = "";
-
-            for (let i = 1; i < datosDB.length; i++) {
-                const fila = datosDB[i];
-                if (fila[4] && fila[4].toString() === user && fila[5] && fila[5].toString() === pass) {
-                    usuarioValido = true;
-                    nombreAsignado = fila[3] ? fila[3].toString().toUpperCase().trim() : "";
-                    rolUsuario = fila[6] ? fila[6].toString().toUpperCase() : "OPERADOR";
-                    break;
-                }
-            }
-
-            if (usuarioValido) {
-                currentUserRole = rolUsuario;
-                currentUserName = user.toUpperCase(); 
-                nombreRealOperador = nombreAsignado; 
-                
-                aplicarPermisosRol(currentUserRole);
-                actualizarSelectsGlobales();
-
-                document.getElementById('loginInterface').classList.add('hidden');
-                document.getElementById('appInterface').classList.remove('hidden');
-                
-                document.getElementById('operacionSelect').value = "MANTENIMIENTO";
-                cambiarVista(); 
-                document.getElementById('mantenimientoSubSelect').value = "NUEVO";
-                cambiarSubActividadMantenimiento();
-            } else {
-                alert("USUARIO O CONTRASEÑA INCORRECTOS");
-            }
-        }
-
         function aplicarPermisosRol(rol) {
             const selectOp = document.getElementById('operacionSelect');
             const options = selectOp.getElementsByTagName('option');
@@ -955,7 +873,6 @@
                 const today = new Date();
                 document.getElementById('fechaMapa').value = today.toISOString().split('T')[0];
                 
-                // Llenar select de usuarios
                 const selUser = document.getElementById('mapaUsuarioSelect');
                 selUser.innerHTML = '<option value="">SELECCIONE USUARIO</option>';
                 const sheetDB = wb.Sheets["DB"];
@@ -1688,8 +1605,17 @@
                 if (subOp === "NUEVO") {
                     const idAir = document.getElementById('new_id_air').value.trim();
                     if (confirm(`¿Ingresar nuevo aireador ${idAir}?`)) {
-                        // Modificado para registrar fecha en Col K (index 10) y hora en Col L (index 11)
-                        datosAires.push([
+                        
+                        // 1. LEER LOS DATOS EXACTOS QUE YA EXISTEN EN LA HOJA
+                        let hojaActual = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false });
+                        
+                        // 2. ELIMINAR FILAS VACÍAS O BASURA AL FINAL PARA ENCONTRAR EL ÚLTIMO DATO REAL
+                        while (hojaActual.length > 0 && (!hojaActual[hojaActual.length - 1] || hojaActual[hojaActual.length - 1].length === 0 || !hojaActual[hojaActual.length - 1][0] || hojaActual[hojaActual.length - 1][0].toString().trim() === "")) {
+                            hojaActual.pop();
+                        }
+
+                        // 3. ESCRIBIR A CONTINUACIÓN DEL ÚLTIMO DATO
+                        hojaActual.push([
                             idAir, 
                             document.getElementById('new_serie').value, 
                             document.getElementById('new_marca').value, 
@@ -1703,6 +1629,11 @@
                             fechaActualFormat, // Col K
                             horaActualFormat   // Col L
                         ]);
+
+                        // 4. GUARDAR Y ACTUALIZAR LA MEMORIA
+                        datosAires = hojaActual;
+                        // No es necesario llamar XLSX.utils.aoa_to_sheet aquí porque aplicarGuardado lo hace usando datosAires.
+                        
                         await aplicarGuardado("Aireador registrado.", true);
                     }
                 }
@@ -1791,13 +1722,11 @@
                 cambiosAsignacion = {};
                 
                 if (mantenerEnNuevoRegistro) {
-                    // Recarga la misma vista en blanco
                     document.getElementById('operacionSelect').value = "MANTENIMIENTO";
                     cambiarVista();
                     document.getElementById('mantenimientoSubSelect').value = "NUEVO";
                     cambiarSubActividadMantenimiento();
                 } else {
-                    // Comportamiento normal: vuelve al inicio
                     document.getElementById('operacionSelect').value = "";
                     cambiarVista();
                 }
