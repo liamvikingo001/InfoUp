@@ -98,7 +98,7 @@
         </div>
 
         <div id="serverStatus" class="server-status-bar server-loading">
-            🟠 CONECTANDO CON SERVIDOR...
+            🟠 INICIANDO SISTEMA...
         </div>
 
         <input type="hidden" id="tempLat" value="0.000000">
@@ -183,13 +183,11 @@
             const select = document.getElementById('new_ubicacion');
             select.innerHTML = '<option value="">-- SELECCIONE --</option>';
             
-            // Generar PRECRIA 1 al 44
             for(let i = 1; i <= 44; i++) {
                 let o = document.createElement('option');
                 o.value = "PRECRIA " + i; o.textContent = "PRECRIA " + i;
                 select.appendChild(o);
             }
-            // Generar PISCINA 1 al 95
             for(let i = 1; i <= 95; i++) {
                 let o = document.createElement('option');
                 o.value = "PISCINA " + i; o.textContent = "PISCINA " + i;
@@ -227,20 +225,32 @@
             }
         }
 
-        // --- PROTECCIÓN CONTRA CIERRES Y RECARGAS ---
+        // --- PROTECCIÓN ESTRICTA CONTRA CIERRES Y RECARGAS ---
         window.addEventListener('keydown', (e) => {
+            const pendientes = localStorage.getItem('pendingPayloads');
+            const hayPendientes = pendientes && JSON.parse(pendientes).length > 0;
+
             if (e.key === 'F5' || (e.ctrlKey && e.key === 'r') || (e.metaKey && e.key === 'r')) {
                 e.preventDefault();
-                alert("⛔ RECARGA BLOQUEADA\n\nLos datos se guardan en memoria temporal.\nNo recargues para mantener la sincronización.");
+                if (!navigator.onLine || hayPendientes) {
+                    alert("⛔ RECARGA BLOQUEADA EN MODO OFFLINE ⛔\n\nTienes registros sin sincronizar en la memoria local. Refrescar la página ahora causará la PÉRDIDA DE DATOS.");
+                } else {
+                    alert("⛔ RECARGA BLOQUEADA\n\nPor seguridad, la recarga manual está deshabilitada.");
+                }
             }
         });
 
         window.addEventListener('beforeunload', (event) => {
             guardarBorradorFormulario();
-            const mensaje = "⚠️ ¿Seguro que deseas salir?";
-            event.preventDefault();
-            event.returnValue = mensaje;
-            return mensaje;
+            const pendientes = localStorage.getItem('pendingPayloads');
+            const hayPendientes = pendientes && JSON.parse(pendientes).length > 0;
+
+            if (!navigator.onLine || hayPendientes) {
+                const mensaje = "⚠️ ¡ALERTA CRÍTICA! Estás en MODO OFFLINE o tienes datos sin sincronizar. Si sales ahora, PODRÍAS PERDER TUS REGISTROS. ¿Seguro que deseas salir?";
+                event.preventDefault();
+                event.returnValue = mensaje;
+                return mensaje;
+            }
         });
 
         document.addEventListener('visibilitychange', () => {
@@ -256,13 +266,14 @@
             const pendientes = localStorage.getItem('pendingPayloads');
             
             if (pendientes && JSON.parse(pendientes).length > 0) {
-                statusDiv.innerText = "🌐 INTERNET: SINCRONIZANDO...";
+                statusDiv.innerText = "🌐 INTERNET RESTAURADO: INICIANDO SYNC...";
                 statusDiv.className = "server-status-bar server-syncing";
-                await delay(3000); 
+                await delay(2000); 
                 autoSyncPendientes();
             } else {
-                statusDiv.innerText = "🟢 CONEXION OK";
+                statusDiv.innerText = "🟢 CONEXIÓN OK";
                 statusDiv.className = "server-status-bar server-online";
+                cargarDatosEnSegundoPlano();
             }
         });
 
@@ -273,20 +284,44 @@
         });
 
         async function iniciarSistema() {
-            cargarPiscinasPorDefecto(); // 1. Cargar las piscinas al instante
-            restaurarBorradorFormulario(); // 2. Llenar si hay datos guardados
-            gestionarGPSPersistente(); // 3. Encender GPS
-            await cargarDatos(); // 4. Intentar descargar DB en segundo plano
+            cargarPiscinasPorDefecto(); 
+            restaurarBorradorFormulario(); 
+            gestionarGPSPersistente(); 
+            
+            // Lógica OFFLINE-FIRST: Cargar desde la memoria local inmediatamente
+            const localData = localStorage.getItem('localDB');
+            const statusDiv = document.getElementById('serverStatus');
+            
+            if (localData) {
+                procesarDatosJSON(JSON.parse(localData));
+                statusDiv.innerText = navigator.onLine ? "🟢 LISTO (Datos Locales Cargados)" : "⚠️ MODO OFFLINE ACTIVO";
+                statusDiv.className = navigator.onLine ? "server-status-bar server-online" : "server-status-bar server-offline";
+            } else {
+                statusDiv.innerText = "🔴 SIN DATOS INICIALES. NECESITA INTERNET 1 VEZ.";
+                statusDiv.className = "server-status-bar server-offline";
+            }
+
+            // Si hay internet, intentar sincronizar pendientes primero y luego actualizar base local
+            if (navigator.onLine) {
+                const pendientes = localStorage.getItem('pendingPayloads');
+                if (pendientes && JSON.parse(pendientes).length > 0) {
+                    await autoSyncPendientes();
+                } else {
+                    cargarDatosEnSegundoPlano();
+                }
+            }
         }
 
         async function autoSyncPendientes() {
             const pendientes = localStorage.getItem('pendingPayloads');
             if (pendientes) {
                 const statusDiv = document.getElementById('serverStatus');
-                statusDiv.innerText = "🔵 ENVIANDO REGISTROS PENDIENTES...";
+                statusDiv.innerText = "🔵 SUBIENDO REGISTROS A LA NUBE...";
                 statusDiv.className = "server-status-bar server-syncing";
                 
-                const cola = JSON.parse(pendientes);
+                let cola = JSON.parse(pendientes);
+                let errores = 0;
+
                 while (cola.length > 0) {
                     const item = cola[0];
                     try {
@@ -296,19 +331,59 @@
                             headers: { "Content-Type": "text/plain" },
                             body: JSON.stringify(item)
                         });
-                        cola.shift(); 
+                        cola.shift(); // Elimina el elemento subido de la cola
                         localStorage.setItem('pendingPayloads', JSON.stringify(cola));
                     } catch (e) {
-                        break; 
+                        errores++;
+                        break; // Sale del bucle si hay error para reintentar luego
                     }
                 }
+
                 if (cola.length === 0) {
                     localStorage.removeItem('pendingPayloads');
-                    statusDiv.innerText = "🟢 SINCRONIZACIÓN EXITOSA";
+                    statusDiv.innerText = "✅ SINCRONIZACIÓN EXITOSA";
                     statusDiv.className = "server-status-bar server-online";
-                    cargarDatos(); 
+                    await delay(2000);
+                    cargarDatosEnSegundoPlano(); 
+                } else if (errores > 0) {
+                    statusDiv.innerText = "⚠️ ERROR AL SUBIR (Reintentando pronto)";
+                    statusDiv.className = "server-status-bar server-offline";
                 }
             }
+        }
+
+        async function cargarDatosEnSegundoPlano() {
+            if (!navigator.onLine) return;
+            const statusDiv = document.getElementById('serverStatus');
+            try {
+                const ts = new Date().getTime();
+                const response = await fetch(`${SCRIPT_URL}?t=${ts}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('localDB', JSON.stringify(data));
+                    procesarDatosJSON(data);
+                    if(!localStorage.getItem('pendingPayloads')) {
+                        statusDiv.innerText = "🟢 LISTO PARA REGISTRAR";
+                        statusDiv.className = "server-status-bar server-online";
+                    }
+                }
+            } catch (e) {
+                console.warn("Actualización en segundo plano falló, operando con caché local.");
+            }
+        }
+
+        function procesarDatosJSON(data) {
+            wb = XLSX.utils.book_new();
+            wb.SheetNames = Object.keys(data);
+            wb.SheetNames.forEach(name => {
+                const ws = XLSX.utils.aoa_to_sheet(data[name]);
+                wb.Sheets[name] = ws;
+            });
+
+            if (!wb.Sheets["Hoja 3"]) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([[]]), "Hoja 3");
+            if (!wb.Sheets["MOV_AIR"]) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([[]]), "MOV_AIR");
+
+            datosAires = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false });
         }
 
         function gestionarGPSPersistente() {
@@ -363,54 +438,6 @@
         setInterval(actualizarReloj, 1000);
         actualizarReloj();
 
-        async function cargarDatos() {
-            const statusDiv = document.getElementById('serverStatus');
-            try {
-                if (!navigator.onLine) throw new Error("Offline");
-
-                statusDiv.innerText = "🟠 DESCARGANDO BASE DE DATOS...";
-                statusDiv.className = "server-status-bar server-loading";
-
-                const ts = new Date().getTime();
-                const response = await fetch(`${SCRIPT_URL}?t=${ts}`);
-                if (!response.ok) throw new Error("Error Servidor");
-                
-                const data = await response.json();
-                localStorage.setItem('localDB', JSON.stringify(data));
-                procesarDatosJSON(data);
-
-                statusDiv.innerText = "🟢 LISTO PARA REGISTRAR";
-                statusDiv.className = "server-status-bar server-online";
-
-            } catch (e) {
-                const localData = localStorage.getItem('localDB');
-                if (localData) {
-                    procesarDatosJSON(JSON.parse(localData));
-                    statusDiv.innerText = "⚠️ MODO OFFLINE ACTIVO";
-                    statusDiv.className = "server-status-bar server-offline";
-                } else {
-                    statusDiv.innerText = "🔴 SIN DATOS LOCALES. NECESITA INTERNET 1 VEZ.";
-                    statusDiv.className = "server-status-bar server-offline";
-                    setTimeout(cargarDatos, 5000);
-                }
-            }
-        }
-
-        function procesarDatosJSON(data) {
-            wb = XLSX.utils.book_new();
-            wb.SheetNames = Object.keys(data);
-            wb.SheetNames.forEach(name => {
-                const ws = XLSX.utils.aoa_to_sheet(data[name]);
-                wb.Sheets[name] = ws;
-            });
-
-            // Mantener integridad de las hojas que espera el servidor aunque no las usemos aquí
-            if (!wb.Sheets["Hoja 3"]) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([[]]), "Hoja 3");
-            if (!wb.Sheets["MOV_AIR"]) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([[]]), "MOV_AIR");
-
-            datosAires = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false });
-        }
-
         function actualizarPrefijoID() {
             const tipo = document.getElementById('new_tipo').value;
             const inputID = document.getElementById('new_id_air');
@@ -435,15 +462,12 @@
                 const fechaActualFormat = getFechaActual();
                 const horaActualFormat = getHoraActual();
 
-                // 1. Extraer los datos actuales de la primera hoja
                 let hojaActual = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false });
                 
-                // 2. Limpiar filas vacías al final
                 while (hojaActual.length > 0 && (!hojaActual[hojaActual.length - 1] || hojaActual[hojaActual.length - 1].length === 0 || !hojaActual[hojaActual.length - 1][0] || hojaActual[hojaActual.length - 1][0].toString().trim() === "")) {
                     hojaActual.pop();
                 }
 
-                // 3. Agregar la nueva fila
                 hojaActual.push([
                     idAir, 
                     document.getElementById('new_serie').value, 
@@ -459,10 +483,8 @@
                     horaActualFormat   // L
                 ]);
 
-                // 4. Guardar datos
                 datosAires = hojaActual;
                 
-                // 5. Limpiar Formulario y Borrador
                 localStorage.removeItem('borradorNuevoAireador');
                 document.getElementById('new_marca').value = "";
                 document.getElementById('new_modelo').value = "";
@@ -471,7 +493,7 @@
                 document.getElementById('new_ubicacion').value = "";
                 document.getElementById('new_id_air').value = "";
 
-                await aplicarGuardado("✅ ¡Aireador guardado en la memoria!");
+                await aplicarGuardado("✅ ¡Aireador guardado en la memoria del dispositivo!");
             }
         }
 
@@ -484,27 +506,42 @@
                     payload[name] = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true });
                 });
 
+                // 1. Guardar SIEMPRE en memoria local primero
                 localStorage.setItem('localDB', JSON.stringify(payload));
 
+                // 2. Comprobar internet para enviar o encolar
                 if (navigator.onLine) {
-                    await fetch(SCRIPT_URL, {
-                        method: "POST",
-                        mode: "no-cors",
-                        headers: { "Content-Type": "text/plain" },
-                        body: JSON.stringify(payload)
-                    });
-                    if(msj) alert(msj + "\nSincronizado con el servidor principal.");
+                    try {
+                        await fetch(SCRIPT_URL, {
+                            method: "POST",
+                            mode: "no-cors",
+                            headers: { "Content-Type": "text/plain" },
+                            body: JSON.stringify(payload)
+                        });
+                        if(msj) alert(msj + "\nSincronizado inmediatamente con la nube.");
+                    } catch (e) {
+                        // Si falla la red durante el fetch, se encola localmente
+                        encolarCargaLocal(payload, msj);
+                    }
                 } else {
-                    let cola = JSON.parse(localStorage.getItem('pendingPayloads') || "[]");
-                    cola.push(payload);
-                    localStorage.setItem('pendingPayloads', JSON.stringify(cola));
-                    alert(msj + "\n⚠️ Estás OFFLINE. Se enviará a la nube cuando regrese el internet.");
+                    encolarCargaLocal(payload, msj);
                 }
 
             } catch (e) {
                 console.error(e);
-                alert("❌ Error al procesar el guardado.");
+                alert("❌ Error al procesar el guardado interno.");
             }
+        }
+
+        function encolarCargaLocal(payload, msj) {
+            let cola = JSON.parse(localStorage.getItem('pendingPayloads') || "[]");
+            cola.push(payload);
+            localStorage.setItem('pendingPayloads', JSON.stringify(cola));
+            alert(msj + "\n⚠️ Estás trabajando OFFLINE. Se subirá a la nube automáticamente al detectar internet.");
+            
+            const statusDiv = document.getElementById('serverStatus');
+            statusDiv.innerText = `⚠️ MODO OFFLINE (${cola.length} pendientes)`;
+            statusDiv.className = "server-status-bar server-offline";
         }
     </script>
 </body>
