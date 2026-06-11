@@ -3,263 +3,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Rastreador">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#eef1f6">
 
-    <title>Registro_Tracker</title>
-    <link rel="icon" type="image/png" href="logo.png">
-    <link rel="apple-touch-icon" href="logo.png">
-    <link rel="manifest" href="manifest.json">
+    <title>AIR Control - Rastreador</title>
 
     <style>
-        /* ============================================================
-           PALETA (tomada de la imagen de referencia)
-           ============================================================ */
         :root {
-            --fondo:        #eef1f6;   /* gris azulado claro de fondo   */
-            --tarjeta:      #ffffff;   /* tarjetas blancas              */
-            --borde:        #dbe3ee;   /* borde sutil de tarjetas       */
-            --navy:         #134a8e;   /* azul principal (texto/botón)  */
-            --navy-oscuro:  #0d3a75;   /* azul de énfasis               */
-            --naranja:      #e8a020;   /* insignia superior             */
-            --verde:        #18a558;   /* estado OK                     */
-            --verde-suave:  #e6f4ec;   /* fondo del pill verde          */
-            --rojo:         #d93838;   /* estado offline                */
+            --fondo:        #eef1f6;
+            --tarjeta:      #ffffff;
+            --borde:        #dbe3ee;
+            --navy:         #134a8e;
+            --navy-oscuro:  #0d3a75;
+            --naranja:      #e8a020;
+            --verde:        #18a558;
+            --verde-suave:  #e6f4ec;
+            --rojo:         #d93838;
             --rojo-suave:   #fdecec;
-            --azul-sync:    #1b6fd6;   /* sincronizando                 */
+            --azul-sync:    #1b6fd6;
             --azul-suave:   #e8f1fd;
-            --gris-texto:   #8a94a6;   /* etiquetas secundarias         */
+            --gris-texto:   #8a94a6;
             --radio: 14px;
         }
 
         * { box-sizing: border-box; }
-
         html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
+            height: 100%; margin: 0; padding: 0; overflow: hidden;
             background-color: var(--fondo);
             font-family: -apple-system, "Segoe UI", "Trebuchet MS", Arial, sans-serif;
-            overscroll-behavior: none;
-            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior: none; -webkit-tap-highlight-color: transparent;
         }
 
         .container {
-            width: 100%;
-            max-width: 480px;
-            height: 100%;
-            margin: 0 auto;
-            padding: 12px;
-            padding-bottom: env(safe-area-inset-bottom, 16px);
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            color: var(--navy);
+            width: 100%; max-width: 480px; height: 100%; margin: 0 auto;
+            padding: 12px; padding-bottom: env(safe-area-inset-bottom, 16px);
+            display: flex; flex-direction: column; gap: 10px; color: var(--navy);
         }
 
-        /* --- Cabecera: marca + GPS --- */
-        .header-card {
-            background: var(--tarjeta);
-            border: 1px solid var(--borde);
-            border-radius: var(--radio);
-            padding: 12px 16px;
-            flex-shrink: 0;
-        }
-        .brand {
-            display: flex;
-            align-items: baseline;
-            gap: 8px;
-        }
-        .brand .logo-text {
-            font-size: 20px;
-            font-weight: 900;
-            font-style: italic;
-            color: var(--navy-oscuro);
-        }
-        .brand .brand-sub {
-            font-size: 13px;
-            font-weight: 700;
-            letter-spacing: 1px;
-            color: var(--navy);
-            text-transform: uppercase;
-        }
-        .gps-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 8px;
-            font-size: 12px;
-            font-weight: 700;
-        }
+        /* --- VISTA PRINCIPAL (TRACKER) --- */
+        .header-card { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: var(--radio); padding: 12px 16px; flex-shrink: 0; }
+        .brand { display: flex; align-items: baseline; gap: 8px; }
+        .brand .logo-text { font-size: 20px; font-weight: 900; font-style: italic; color: var(--navy-oscuro); }
+        .brand .brand-sub { font-size: 13px; font-weight: 700; letter-spacing: 1px; color: var(--navy); text-transform: uppercase; }
+        
+        .gps-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 12px; font-weight: 700; }
         .gps-row .gps-label { color: var(--navy); text-transform: uppercase; }
         .gps-row .gps-label.buscando { color: var(--naranja); }
         .gps-row .gps-coords { color: var(--navy-oscuro); font-weight: 800; }
 
-        /* --- Pill de estado del servidor --- */
         .server-status-bar {
-            border-radius: var(--radio);
-            padding: 12px;
-            text-align: center;
-            font-size: 13px;
-            font-weight: 800;
-            letter-spacing: .5px;
-            text-transform: uppercase;
-            border: 1px solid var(--borde);
-            transition: all .3s ease;
-            flex-shrink: 0;
+            border-radius: var(--radio); padding: 12px; text-align: center; font-size: 13px; font-weight: 800;
+            letter-spacing: .5px; text-transform: uppercase; border: 1px solid var(--borde); transition: all .3s ease; flex-shrink: 0;
         }
         .server-online  { background: var(--verde-suave); color: var(--verde);    border-color: #bfe5d0; }
         .server-offline { background: var(--rojo-suave);  color: var(--rojo);     border-color: #f3c9c9; }
         .server-syncing { background: var(--azul-suave);  color: var(--azul-sync);border-color: #c4dcf8; }
         .server-loading { background: #fdf3e3;            color: var(--naranja);  border-color: #f0ddb8; }
 
-        /* --- Hora / Fecha --- */
-        .grid-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            flex-shrink: 0;
-        }
-        .info-card {
-            background: var(--tarjeta);
-            border: 1px solid var(--borde);
-            border-radius: var(--radio);
-            padding: 14px 8px;
-            text-align: center;
-        }
-        .info-card .valor {
-            font-size: 24px;
-            font-weight: 900;
-            color: var(--navy-oscuro);
-            font-variant-numeric: tabular-nums;
-        }
-        .info-card .etiqueta {
-            font-size: 12px;
-            color: var(--gris-texto);
-            font-weight: 600;
-            margin-top: 4px;
-        }
+        .grid-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; flex-shrink: 0; }
+        .info-card { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: var(--radio); padding: 14px 8px; text-align: center; }
+        .info-card .valor { font-size: 24px; font-weight: 900; color: var(--navy-oscuro); font-variant-numeric: tabular-nums; }
+        .info-card .etiqueta { font-size: 12px; color: var(--gris-texto); font-weight: 600; margin-top: 4px; }
 
-        /* --- Cronómetro --- */
-        .timer-card {
-            background: var(--tarjeta);
-            border: 1px solid var(--borde);
-            border-radius: var(--radio);
-            width: 100%;
-            padding: 20px 16px;
-            text-align: center;
-            box-shadow: 0 4px 14px rgba(13, 58, 117, 0.08);
-            flex-shrink: 0;
-        }
-        .timer-card .timer-label {
-            display: inline-block;
-            background: var(--navy);
-            color: #fff;
-            font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            padding: 6px 16px;
-            border-radius: 999px;
-            margin-bottom: 14px;
-        }
-        .timer-card .timer-valor {
-            font-size: 44px;
-            font-weight: 900;
-            color: var(--navy-oscuro);
-            font-variant-numeric: tabular-nums;
-            line-height: 1;
-        }
-        .timer-card .timer-sub {
-            font-size: 12px;
-            color: var(--gris-texto);
-            font-weight: 600;
-            margin-top: 10px;
-        }
+        .timer-card { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: var(--radio); width: 100%; padding: 20px 16px; text-align: center; flex-shrink: 0; }
+        .timer-card .timer-label { display: inline-block; background: var(--navy); color: #fff; font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; padding: 6px 16px; border-radius: 999px; margin-bottom: 14px; }
+        .timer-card .timer-valor { font-size: 44px; font-weight: 900; color: var(--navy-oscuro); font-variant-numeric: tabular-nums; line-height: 1; }
+        .timer-card .timer-sub { font-size: 12px; color: var(--gris-texto); font-weight: 600; margin-top: 10px; }
 
-        /* --- Lista de coordenadas --- */
-        .lista-card {
-            background: var(--tarjeta);
-            border: 1px solid var(--navy);
-            border-radius: var(--radio);
-            flex: 1;
-            min-height: 0;            /* permite que el scroll interno funcione */
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        .lista-header {
-            padding: 10px 14px;
-            font-size: 12px;
-            font-weight: 800;
-            letter-spacing: .5px;
-            text-transform: uppercase;
-            color: var(--navy);
-            border-bottom: 1px solid var(--borde);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-shrink: 0;
-        }
-        .lista-header .lista-contador {
-            color: var(--gris-texto);
-            font-weight: 700;
-            text-transform: none;
-        }
-        .lista-body {
-            flex: 1;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            padding: 4px 14px 12px;
-        }
-        .lista-vacia {
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: var(--gris-texto);
-            font-size: 14px;
-            font-weight: 600;
-        }
-        .coord-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 8px;
-            padding: 9px 2px;
-            border-bottom: 1px dashed var(--borde);
-            font-size: 13px;
-        }
-        .coord-hora {
-            color: var(--gris-texto);
-            font-weight: 700;
-            font-variant-numeric: tabular-nums;
-            flex-shrink: 0;
-        }
-        .coord-valor {
-            color: var(--navy-oscuro);
-            font-weight: 800;
-            font-variant-numeric: tabular-nums;
-            flex: 1;
-            text-align: center;
-        }
-        .coord-estado {
-            flex-shrink: 0;
-            font-size: 12px;
-            font-weight: 800;
-        }
+        .lista-card { background: var(--tarjeta); border: 1px solid var(--navy); border-radius: var(--radio); flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+        .lista-header { padding: 10px 14px; font-size: 12px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--navy); border-bottom: 1px solid var(--borde); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .lista-body { flex: 1; overflow-y: auto; padding: 4px 14px 12px; }
+        .lista-vacia { height: 100%; display: flex; justify-content: center; align-items: center; color: var(--gris-texto); font-size: 14px; font-weight: 600; }
+        
+        .coord-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 2px; border-bottom: 1px dashed var(--borde); font-size: 13px; }
+        .coord-hora { color: var(--gris-texto); font-weight: 700; flex-shrink: 0; }
+        .coord-valor { color: var(--navy-oscuro); font-weight: 800; flex: 1; text-align: center; }
+        .coord-estado { flex-shrink: 0; font-size: 12px; font-weight: 800; }
         .coord-estado.pendiente { color: var(--naranja); }
         .coord-estado.enviado   { color: var(--verde); }
+
+        .btn-reportar {
+            background-color: #2b5c9c; color: white; border: none; border-radius: 10px; padding: 16px;
+            font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; flex-shrink: 0;
+            box-shadow: 0 4px 10px rgba(13, 58, 117, 0.2); transition: background-color 0.2s;
+        }
+        .btn-reportar:active { background-color: var(--navy-oscuro); }
+
+        /* --- VISTA DE NOVEDADES Y CÁMARA --- */
+        .pantalla-oculta { display: none !important; }
+
+        .btn-volver { background: transparent; border: none; color: var(--rojo); font-weight: 800; font-size: 13px; cursor: pointer; padding: 0; }
+        
+        .daily-row {
+            display: flex; align-items: center; justify-content: space-between; background-color: #ffffff;
+            border: 1.5px solid var(--navy); border-radius: 10px; padding: 14px 15px; margin-top: 15px;
+            cursor: pointer; width: 100%; box-sizing: border-box; flex-shrink: 0;
+        }
+        .camera-icon { font-size: 24px; }
+        .daily-text { color: var(--navy); font-weight: bold; font-size: 16px; text-align: center; flex-grow: 1; }
+        .checkbox-icon { width: 26px; height: 26px; border: 1.5px solid var(--navy); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--verde); font-weight: bold; font-size: 18px; }
+
+        .image-placeholder { width: 100%; min-height: 200px; background-color: #f3f5f7; border: 1.5px dashed var(--borde); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--gris-texto); font-weight: bold; font-size: 16px; margin: 15px 0; }
+        #capturedImageContainer { width: 100%; margin: 15px 0; display: none; text-align: center; }
+        #finalPhoto { max-width: 100%; border-radius: 10px; border: 1.5px solid var(--navy); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        #retryPhotoBtn { margin-top: 10px; background-color: var(--rojo); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; }
+
+        .details-textarea { width: 100%; min-height: 120px; border: 1.5px solid var(--borde); border-radius: 10px; padding: 15px; resize: none; font-size: 15px; color: var(--navy-oscuro); font-family: inherit; margin-bottom: 15px; outline: none; }
+        .details-textarea:focus { border-color: var(--navy); }
+        
+        .submit-btn { width: 100%; padding: 16px; background-color: var(--verde); color: white; border: none; border-radius: 10px; font-size: 17px; font-weight: bold; cursor: pointer; transition: filter 0.2s; }
+        .submit-btn:disabled { background-color: var(--gris-texto); }
+        .submit-btn:active { filter: brightness(0.9); }
+
+        /* OVERLAY CÁMARA OSCURA */
+        #cameraOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #000000; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+        #cameraOverlay.active { display: flex; }
+        .camera-container { width: 100%; height: 100%; display: flex; flex-direction: column; position: relative; }
+        #liveVideo { width: 100%; height: 100%; object-fit: cover; }
+        #photoCanvas { display: none; }
+        .camera-controls { position: absolute; bottom: 40px; left: 0; width: 100%; display: flex; justify-content: center; gap: 20px; }
+        .camera-btn { padding: 15px 30px; border-radius: 30px; font-weight: bold; font-size: 16px; cursor: pointer; border: none; }
+        .capture-btn { background-color: #ffffff; color: #000000; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .close-camera-btn { background-color: var(--rojo); color: white; }
     </style>
 </head>
 <body onload="iniciarSistema()">
-    <div class="container">
 
+    <div class="container" id="vistaTracker">
         <div class="header-card">
             <div class="brand">
                 <span class="logo-text">AIR</span>
@@ -271,19 +144,11 @@
             </div>
         </div>
 
-        <div id="serverStatus" class="server-status-bar server-loading">
-            🟠 Iniciando sistema...
-        </div>
+        <div id="serverStatus" class="server-status-bar server-loading">🟠 Iniciando sistema...</div>
 
         <div class="grid-row">
-            <div class="info-card">
-                <div class="valor" id="txtHora">--:--:--</div>
-                <div class="etiqueta">Hora</div>
-            </div>
-            <div class="info-card">
-                <div class="valor" id="txtFecha">--/--/----</div>
-                <div class="etiqueta">Fecha</div>
-            </div>
+            <div class="info-card"><div class="valor" id="txtHora">--:--:--</div><div class="etiqueta">Hora</div></div>
+            <div class="info-card"><div class="valor" id="txtFecha">--/--/----</div><div class="etiqueta">Fecha</div></div>
         </div>
 
         <div class="timer-card">
@@ -301,37 +166,71 @@
                 <div class="lista-vacia" id="listaVacia">Esperando primera coordenada...</div>
             </div>
         </div>
+
+        <button class="btn-reportar" onclick="abrirNovedad()">Reportar Novedad</button>
+    </div>
+
+    <div class="container pantalla-oculta" id="vistaNovedad">
+        <div class="header-card" style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="brand">
+                <span class="brand-sub" style="font-size:15px;">REGISTRO DE NOVEDAD</span>
+            </div>
+            <button class="btn-volver" onclick="cerrarNovedad()">✕ VOLVER</button>
+        </div>
+
+        <div class="lista-card" style="padding: 15px; border: none; overflow-y: auto; background: transparent;">
+            
+            <button type="button" class="daily-row" id="startCameraBtn">
+                <span class="camera-icon">📸</span>
+                <span class="daily-text" id="uploadLabel">Tomar Evidencia</span>
+                <span class="checkbox-icon" id="photoCheckmark"></span>
+            </button>
+
+            <div id="imagePlaceholder" class="image-placeholder">Esperando Imagen...</div>
+            
+            <div id="capturedImageContainer">
+                <img id="finalPhoto" alt="Foto capturada">
+                <button type="button" id="retryPhotoBtn">Eliminar y Reintentar</button>
+            </div>
+
+            <textarea id="txtDetalle" class="details-textarea" placeholder="Redacte la novedad encontrada aquí..." required></textarea>
+            
+            <button type="button" id="btnSubmitNovedad" class="submit-btn" onclick="enviarNovedad()">Enviar Reporte</button>
+        </div>
+    </div>
+
+    <div id="cameraOverlay">
+        <div class="camera-container">
+            <video id="liveVideo" autoplay playsinline></video>
+            <canvas id="photoCanvas"></canvas> 
+            <div class="camera-controls">
+                <button type="button" class="camera-btn close-camera-btn" id="closeCameraBtn">Cancelar</button>
+                <button type="button" class="camera-btn capture-btn" id="captureBtn">Capturar Foto</button>
+            </div>
+        </div>
     </div>
 
     <script>
     "use strict";
 
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbySvbR0d_3v-IL0E_plszAPgWo9jSP4DKsC9yvx8i5CRP1KLZZPaLTqDoLDOKQ2nr4mhA/exec";
+    // 🔴 URL DE GOOGLE APPS SCRIPT ACTUALIZADA
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwNRvdj4eG9TPzQ7Jr8acAO-GCMjwWgze58bw7TxxsLcvuFwBmXLL6G6mkIRDbxxDr8ZA/exec"; 
 
-    // Claves de almacenamiento local
-    const KEY_COLA       = 'pendingTracking';  // registros aún no confirmados por el servidor
-    const KEY_HISTORIAL  = 'trackingLocal';    // respaldo local (limitado) de puntos enviados
-    const KEY_LOCALDB    = 'localDB';          // datos iniciales descargados del servidor
-
-    const MAX_HISTORIAL  = 2000;   // tope de filas guardadas localmente (evita llenar localStorage)
-    const LOTE_MAXIMO    = 50;     // filas por envío al servidor
-    const INTERVALO_GPS  = 30000;  // ms entre puntos de rastreo
-    const INTERVALO_SYNC = 60000;  // ms entre reintentos de sincronización
+    // --- VARIABLES GLOBALES DEL TRACKER ---
+    const KEY_COLA       = 'pendingTracking';  
+    const KEY_HISTORIAL  = 'trackingLocal';    
+    const KEY_LOCALDB    = 'localDB';          
+    const MAX_HISTORIAL  = 2000;   
+    const LOTE_MAXIMO    = 50;     
+    const INTERVALO_GPS  = 30000;  
+    const INTERVALO_SYNC = 60000;  
 
     let ultimaLat = null, ultimaLon = null;
-    let datosAires = [];
     let appStartTime = Date.now();
     let totalRegistrados = 0;
-
-    /* ============================================================
-       MEJORA 5: cola sin condiciones de carrera.
-       Un único candado (sincronizando) y helpers que SIEMPRE
-       releen localStorage antes de modificarlo. Las filas nuevas
-       se agregan al final y la sincronización consume del frente,
-       por lo que nunca se pisan entre sí.
-       ============================================================ */
     let sincronizando = false;
 
+    // --- COLA Y TRACKING ---
     const obtenerCola = () => JSON.parse(localStorage.getItem(KEY_COLA) || '[]');
     const guardarCola = (c) => localStorage.setItem(KEY_COLA, JSON.stringify(c));
 
@@ -343,60 +242,34 @@
         actualizarResumen();
     }
 
-    /* ============================================================
-       MEJORA 2: confirmación real del servidor.
-       Se elimina mode:"no-cors". Apps Script (desplegado con acceso
-       "Cualquier persona" y respondiendo con ContentService) sí
-       devuelve cabeceras CORS, así que podemos leer la respuesta y
-       solo vaciar la cola cuando el servidor confirma {ok:true}.
-       ============================================================ */
     async function enviarLote(filas) {
         try {
             const resp = await fetch(SCRIPT_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // simple request: sin preflight
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ tipo: 'TRACKING_DELTA', filas: filas })
             });
             if (!resp.ok) return false;
             const r = await resp.json();
             return r && r.ok === true;
-        } catch (e) {
-            return false;
-        }
+        } catch (e) { return false; }
     }
 
-    /* ============================================================
-       MEJORA 3: envío por deltas.
-       Ya no se reenvía el libro completo cada 30 s: solo las filas
-       nuevas de TRACKING, en lotes. El historial local se limita a
-       MAX_HISTORIAL filas, así localStorage nunca se desborda.
-       ============================================================ */
     async function sincronizar() {
         if (sincronizando || !navigator.onLine) return;
-
         const colaInicial = obtenerCola();
-        if (colaInicial.length === 0) {
-            actualizarEstadoUI();
-            return;
-        }
+        if (colaInicial.length === 0) { actualizarEstadoUI(); return; }
 
         sincronizando = true;
-        mostrarEstado('syncing', `🔄 Sincronizando (${colaInicial.length} pendientes)...`);
+        mostrarEstado('syncing', `🔄 Sincronizando (${colaInicial.length})...`);
 
         try {
             while (true) {
                 const cola = obtenerCola();
                 if (cola.length === 0) break;
-
                 const lote = cola.slice(0, LOTE_MAXIMO);
                 const ok = await enviarLote(lote);
-
-                if (!ok) {
-                    mostrarEstado('offline', `⚠️ Error al subir (${obtenerCola().length} pendientes, se reintentará)`);
-                    return;
-                }
-
-                // Releer la cola: el rastreador pudo agregar filas mientras enviábamos.
+                if (!ok) { mostrarEstado('offline', `⚠️ Error al subir (${obtenerCola().length})`); return; }
                 const colaActual = obtenerCola();
                 guardarCola(colaActual.slice(lote.length));
                 agregarAlHistorial(lote);
@@ -418,141 +291,11 @@
         totalRegistrados = hist.length + obtenerCola().length;
     }
 
-    /* ============================================================
-       MEJORA 1: Wake Lock para que la pantalla no se apague
-       (los navegadores suspenden el GPS y los timers con la
-       pantalla apagada). Se re-solicita al volver a primer plano.
-       ============================================================ */
+    // --- GPS Y WAKE LOCK ---
     let wakeLock = null;
-    async function solicitarWakeLock() {
-        try {
-            if ('wakeLock' in navigator) {
-                wakeLock = await navigator.wakeLock.request('screen');
-                console.log('🔆 Wake Lock activo: la pantalla no se apagará.');
-            }
-        } catch (e) {
-            console.warn('Wake Lock no disponible:', e.message);
-        }
-    }
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-            solicitarWakeLock();
-            sincronizar();
-        }
-    });
+    async function solicitarWakeLock() { try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (e) { } }
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { solicitarWakeLock(); sincronizar(); } });
 
-    /* ============================================================
-       MEJORA 4: Service Worker como archivo real (sw.js) en lugar
-       de un Blob URL (incompatible en varios navegadores).
-       ============================================================ */
-    function instalarServiceWorker() {
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js')
-                .then(() => console.log('⚙️ Service Worker activo.'))
-                .catch(err => console.warn('SW error:', err));
-        }
-    }
-
-    /* ============================================================
-       PROTECCIONES (se mantienen del diseño original)
-       ============================================================ */
-    function anularBotonAtras() {
-        window.history.pushState(null, null, window.location.href);
-        window.addEventListener('popstate', () => {
-            window.history.pushState(null, null, window.location.href);
-        });
-    }
-
-    window.addEventListener('keydown', (e) => {
-        if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'r')) {
-            e.preventDefault();
-            const pendientes = obtenerCola().length;
-            alert(pendientes > 0
-                ? `⛔ RECARGA BLOQUEADA\n\nTienes ${pendientes} registros sin sincronizar.`
-                : '⛔ RECARGA BLOQUEADA\n\nPor seguridad, la recarga manual está deshabilitada.');
-        }
-    });
-
-    window.addEventListener('beforeunload', (event) => {
-        if (!navigator.onLine || obtenerCola().length > 0) {
-            event.preventDefault();
-            event.returnValue = '⚠️ Tienes datos sin sincronizar.';
-            return event.returnValue;
-        }
-    });
-
-    /* ============================================================
-       CONEXIÓN
-       ============================================================ */
-    window.addEventListener('online', () => {
-        sincronizar();
-        if (obtenerCola().length === 0) cargarDatosEnSegundoPlano();
-    });
-
-    window.addEventListener('offline', () => {
-        mostrarEstado('offline', `⚠️ Modo offline (${obtenerCola().length} pendientes)`);
-    });
-
-    /* ============================================================
-       INICIO
-       ============================================================ */
-    async function iniciarSistema() {
-        anularBotonAtras();
-        instalarServiceWorker();
-        solicitarWakeLock();
-        gestionarGPSPersistente();
-
-        const hist = JSON.parse(localStorage.getItem(KEY_HISTORIAL) || '[]');
-        totalRegistrados = hist.length + obtenerCola().length;
-        restaurarLista(hist);
-
-        const localData = localStorage.getItem(KEY_LOCALDB);
-        if (localData) {
-            procesarDatosJSON(JSON.parse(localData));
-            actualizarEstadoUI();
-        } else if (!navigator.onLine) {
-            mostrarEstado('offline', '🔴 Sin datos iniciales. Necesita internet 1 vez.');
-        }
-
-        if (navigator.onLine) {
-            await sincronizar();
-            cargarDatosEnSegundoPlano();
-        }
-
-        iniciarRastreador();
-        setInterval(sincronizar, INTERVALO_SYNC);   // reintento periódico
-        setInterval(actualizarCronometro, 1000);
-        setInterval(actualizarReloj, 1000);
-        actualizarReloj();
-        actualizarResumen();
-    }
-
-    async function cargarDatosEnSegundoPlano() {
-        if (!navigator.onLine) return;
-        try {
-            const resp = await fetch(`${SCRIPT_URL}?t=${Date.now()}`);
-            if (resp.ok) {
-                const data = await resp.json();
-                localStorage.setItem(KEY_LOCALDB, JSON.stringify(data));
-                procesarDatosJSON(data);
-                if (obtenerCola().length === 0) {
-                    mostrarEstado('online', '🟢 Conexión con servidor: OK');
-                }
-            }
-        } catch (e) { /* sin conexión real: se reintentará */ }
-    }
-
-    // Los datos del servidor ya llegan como JSON de arrays:
-    // se eliminó la dependencia de SheetJS (XLSX), que solo se
-    // usaba para reconvertir JSON → hoja → JSON.
-    function procesarDatosJSON(data) {
-        const primeraHoja = Object.keys(data)[0];
-        datosAires = primeraHoja ? data[primeraHoja] : [];
-    }
-
-    /* ============================================================
-       GPS Y RASTREADOR
-       ============================================================ */
     function gestionarGPSPersistente() {
         if (!navigator.geolocation) return;
         navigator.geolocation.watchPosition(
@@ -578,24 +321,16 @@
             if (!ultimaLat || !ultimaLon) return;
             totalRegistrados++;
             encolarFila([ultimaLat, ultimaLon, getFechaActual(), getHoraActual()]);
-            sincronizar(); // intenta enviar de inmediato; si falla, queda en cola
+            sincronizar(); 
         }, INTERVALO_GPS);
     }
 
-    /* ============================================================
-       FECHA / HORA / UI
-       ============================================================ */
+    // --- FECHA Y HORA ---
     const pad = n => n.toString().padStart(2, '0');
+    const sinApostrofe = v => String(v).replace(/^'/, '');
 
-    function getFechaActual() {
-        const d = new Date();
-        return `'${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
-    }
-
-    function getHoraActual() {
-        const d = new Date();
-        return `'${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-    }
+    function getFechaActual() { const d = new Date(); return `'${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`; }
+    function getHoraActual() { const d = new Date(); return `'${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; }
 
     function actualizarReloj() {
         const d = new Date();
@@ -605,60 +340,31 @@
 
     function actualizarCronometro() {
         const seg = Math.floor((Date.now() - appStartTime) / 1000);
-        const h = pad(Math.floor(seg / 3600));
-        const m = pad(Math.floor((seg % 3600) / 60));
-        const s = pad(seg % 60);
+        const h = pad(Math.floor(seg / 3600)), m = pad(Math.floor((seg % 3600) / 60)), s = pad(seg % 60);
         document.getElementById('cronometro').innerText = `${h}:${m}:${s}`;
     }
 
     function actualizarResumen() {
         const pendientes = obtenerCola().length;
-        document.getElementById('resumenRegistros').innerText =
-            `${totalRegistrados} puntos registrados · ${pendientes} pendientes`;
-        document.getElementById('listaContador').innerText =
-            `${totalRegistrados} ${totalRegistrados === 1 ? 'punto' : 'puntos'}`;
+        document.getElementById('resumenRegistros').innerText = `${totalRegistrados} registrados · ${pendientes} pendientes`;
+        document.getElementById('listaContador').innerText = `${totalRegistrados} puntos`;
         if (!sincronizando) actualizarEstadoUI();
     }
 
-    /* ============================================================
-       LISTA DE COORDENADAS
-       Cada punto capturado (cada 30 s) se agrega arriba de la lista
-       con su hora y estado: ⏳ pendiente → ✓ enviado al confirmarse.
-       ============================================================ */
-    const MAX_LISTA = 100;            // filas visibles como máximo
-    let entradasPendientesUI = [];    // elementos esperando confirmación
-
-    const sinApostrofe = v => String(v).replace(/^'/, '');
-
+    // --- UI Y ESTADOS ---
+    const MAX_LISTA = 100; let entradasPendientesUI = [];
     function agregarEntradaLista(fila, estado) {
         const body = document.getElementById('listaBody');
-        const vacio = document.getElementById('listaVacia');
-        if (vacio) vacio.remove();
+        const vacio = document.getElementById('listaVacia'); if (vacio) vacio.remove();
 
-        const div = document.createElement('div');
-        div.className = 'coord-item';
+        const div = document.createElement('div'); div.className = 'coord-item';
+        const hora = document.createElement('span'); hora.className = 'coord-hora'; hora.textContent = sinApostrofe(fila[3]);
+        const valor = document.createElement('span'); valor.className = 'coord-valor'; valor.textContent = `${fila[0]}, ${fila[1]}`;
+        const est = document.createElement('span'); est.className = `coord-estado ${estado}`; est.textContent = estado === 'enviado' ? '✓ Enviado' : '⏳ Pendiente';
 
-        const hora = document.createElement('span');
-        hora.className = 'coord-hora';
-        hora.textContent = sinApostrofe(fila[3]);
-
-        const valor = document.createElement('span');
-        valor.className = 'coord-valor';
-        valor.textContent = `${fila[0]}, ${fila[1]}`;
-
-        const est = document.createElement('span');
-        est.className = `coord-estado ${estado}`;
-        est.textContent = estado === 'enviado' ? '✓ Enviado' : '⏳ Pendiente';
-
-        div.append(hora, valor, est);
-        body.prepend(div);   // la más reciente siempre arriba
-
+        div.append(hora, valor, est); body.prepend(div);   
         if (estado === 'pendiente') entradasPendientesUI.push(div);
-
-        // Mantener la lista liviana: se recortan las más antiguas (abajo)
-        while (body.children.length > MAX_LISTA) {
-            body.removeChild(body.lastChild);
-        }
+        while (body.children.length > MAX_LISTA) { body.removeChild(body.lastChild); }
     }
 
     function marcarEnviadasUI(cantidad) {
@@ -666,17 +372,11 @@
             const div = entradasPendientesUI.shift();
             if (!div) break;
             const est = div.querySelector('.coord-estado');
-            if (est) {
-                est.className = 'coord-estado enviado';
-                est.textContent = '✓ Enviado';
-            }
+            if (est) { est.className = 'coord-estado enviado'; est.textContent = '✓ Enviado'; }
         }
     }
 
     function restaurarLista(historial) {
-        // Primero el historial enviado (las últimas MAX_LISTA filas),
-        // luego la cola pendiente; al ir con prepend, lo más nuevo
-        // queda arriba y los pendientes conservan su orden de envío.
         historial.slice(-MAX_LISTA).forEach(f => agregarEntradaLista(f, 'enviado'));
         entradasPendientesUI = [];
         obtenerCola().forEach(f => agregarEntradaLista(f, 'pendiente'));
@@ -684,18 +384,175 @@
 
     function mostrarEstado(tipo, texto) {
         const div = document.getElementById('serverStatus');
-        div.innerText = texto;
-        div.className = `server-status-bar server-${tipo}`;
+        div.innerText = texto; div.className = `server-status-bar server-${tipo}`;
     }
 
     function actualizarEstadoUI() {
-        const pendientes = obtenerCola().length;
-        if (!navigator.onLine) {
-            mostrarEstado('offline', `⚠️ Modo offline (${pendientes} pendientes)`);
-        } else if (pendientes > 0) {
-            mostrarEstado('syncing', `🔄 Sincronizando (${pendientes} pendientes)...`);
-        } else {
-            mostrarEstado('online', '🟢 Conexión con servidor: OK');
+        const p = obtenerCola().length;
+        if (!navigator.onLine) mostrarEstado('offline', `⚠️ Modo offline (${p} pendientes)`);
+        else if (p > 0) mostrarEstado('syncing', `🔄 Sincronizando (${p} pendientes)...`);
+        else mostrarEstado('online', '🟢 Conexión con servidor: OK');
+    }
+
+    // --- INICIO ---
+    window.addEventListener('online', () => { sincronizar(); });
+    window.addEventListener('offline', () => { mostrarEstado('offline', `⚠️ Modo offline (${obtenerCola().length} pendientes)`); });
+
+    async function iniciarSistema() {
+        solicitarWakeLock();
+        gestionarGPSPersistente();
+        const hist = JSON.parse(localStorage.getItem(KEY_HISTORIAL) || '[]');
+        totalRegistrados = hist.length + obtenerCola().length;
+        restaurarLista(hist);
+        if (navigator.onLine) await sincronizar(); else actualizarEstadoUI();
+        iniciarRastreador();
+        setInterval(sincronizar, INTERVALO_SYNC);  
+        setInterval(actualizarCronometro, 1000);
+        setInterval(actualizarReloj, 1000);
+        actualizarReloj(); actualizarResumen();
+    }
+
+
+    // ============================================================
+    // LÓGICA DE NOVEDADES Y CÁMARA WEBRTC
+    // ============================================================
+    
+    function abrirNovedad() {
+        document.getElementById('vistaTracker').classList.add('pantalla-oculta');
+        document.getElementById('vistaNovedad').classList.remove('pantalla-oculta');
+    }
+
+    function cerrarNovedad() {
+        document.getElementById('vistaNovedad').classList.add('pantalla-oculta');
+        document.getElementById('vistaTracker').classList.remove('pantalla-oculta');
+    }
+
+    const startCameraBtn = document.getElementById('startCameraBtn');
+    const uploadLabel = document.getElementById('uploadLabel');
+    const photoCheckmark = document.getElementById('photoCheckmark');
+    
+    const cameraOverlay = document.getElementById('cameraOverlay');
+    const liveVideo = document.getElementById('liveVideo');
+    const photoCanvas = document.getElementById('photoCanvas');
+    const captureBtn = document.getElementById('captureBtn');
+    const closeCameraBtn = document.getElementById('closeCameraBtn');
+
+    const imagePlaceholder = document.getElementById('imagePlaceholder');
+    const capturedImageContainer = document.getElementById('capturedImageContainer');
+    const finalPhoto = document.getElementById('finalPhoto');
+    const retryPhotoBtn = document.getElementById('retryPhotoBtn');
+    const txtDetalle = document.getElementById('txtDetalle');
+    const btnSubmitNovedad = document.getElementById('btnSubmitNovedad');
+
+    let capturedPhotoData = null; 
+    let currentStream = null;
+
+    function stopCamera() {
+        cameraOverlay.classList.remove('active');
+        if (currentStream) {
+            currentStream.getTracks().forEach(track => track.stop());
+            currentStream = null;
+        }
+    }
+
+    startCameraBtn.addEventListener('click', async () => {
+        if (capturedPhotoData) return; 
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert('El navegador no soporta el acceso a la cámara nativa.');
+            return;
+        }
+        try {
+            // Intenta abrir la cámara trasera
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            currentStream = stream;
+            liveVideo.srcObject = stream;
+            cameraOverlay.classList.add('active'); 
+        } catch (error) {
+            alert('Permiso denegado o error al acceder a la cámara.');
+        }
+    });
+
+    closeCameraBtn.addEventListener('click', stopCamera);
+
+    captureBtn.addEventListener('click', () => {
+        if (!currentStream) return;
+        
+        photoCanvas.width = liveVideo.videoWidth;
+        photoCanvas.height = liveVideo.videoHeight;
+        const context = photoCanvas.getContext('2d');
+        context.drawImage(liveVideo, 0, 0, photoCanvas.width, photoCanvas.height);
+        
+        // Guardar la foto en Base64
+        capturedPhotoData = photoCanvas.toDataURL('image/jpeg', 0.7);
+        finalPhoto.src = capturedPhotoData;
+        
+        // Cambiar UI del formulario
+        imagePlaceholder.style.display = 'none';
+        capturedImageContainer.style.display = 'block';
+        uploadLabel.innerHTML = 'Evidencia Capturada';
+        photoCheckmark.innerHTML = '✔️';
+
+        stopCamera();
+    });
+
+    retryPhotoBtn.addEventListener('click', () => {
+        capturedPhotoData = null;
+        finalPhoto.src = '';
+        capturedImageContainer.style.display = 'none';
+        imagePlaceholder.style.display = 'flex';
+        uploadLabel.innerHTML = 'Tomar Evidencia';
+        photoCheckmark.innerHTML = '';
+    });
+
+    // --- ENVÍO DE LA NOVEDAD ---
+    async function enviarNovedad() {
+        const detalle = txtDetalle.value.trim();
+
+        if (!capturedPhotoData) { alert('⚠️ Es obligatorio tomar la foto de evidencia.'); return; }
+        if (!detalle) { alert('⚠️ Es obligatorio redactar el detalle de la novedad.'); return; }
+        if (!navigator.onLine) { alert('⚠️ Requiere conexión a internet para subir fotos.'); return; }
+
+        btnSubmitNovedad.disabled = true;
+        btnSubmitNovedad.innerText = "Subiendo archivo...";
+
+        const payload = {
+            tipo: 'NOVEDAD',
+            fecha: sinApostrofe(getFechaActual()),
+            hora: sinApostrofe(getHoraActual()),
+            lat: ultimaLat || "0",
+            lon: ultimaLon || "0",
+            detalle: detalle,
+            imagenBase64: capturedPhotoData
+        };
+
+        try {
+            const resp = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await resp.json();
+
+            if (result.ok) {
+                alert("✅ Reporte de novedad enviado con éxito.");
+                // Resetear Formulario
+                capturedPhotoData = null;
+                finalPhoto.src = '';
+                capturedImageContainer.style.display = 'none';
+                imagePlaceholder.style.display = 'flex';
+                uploadLabel.innerHTML = 'Tomar Evidencia';
+                photoCheckmark.innerHTML = '';
+                txtDetalle.value = '';
+                cerrarNovedad();
+            } else {
+                alert("❌ Error del servidor al guardar la novedad.");
+            }
+        } catch (error) {
+            alert("❌ Error de conexión al intentar enviar el reporte.");
+        } finally {
+            btnSubmitNovedad.disabled = false;
+            btnSubmitNovedad.innerText = "Enviar Reporte";
         }
     }
     </script>
