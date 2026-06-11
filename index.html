@@ -2,33 +2,22 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Rastreador">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#eef1f6">
 
-    <title>AIR Control - Rastreador</title>
+    <title>AIR Control</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 
     <style>
         :root {
-            --fondo:        #eef1f6;
-            --tarjeta:      #ffffff;
-            --borde:        #dbe3ee;
-            --navy:         #134a8e;
-            --navy-oscuro:  #0d3a75;
-            --naranja:      #e8a020;
-            --verde:        #18a558;
-            --verde-suave:  #e6f4ec;
-            --rojo:         #d93838;
-            --rojo-suave:   #fdecec;
-            --azul-sync:    #1b6fd6;
-            --azul-suave:   #e8f1fd;
-            --gris-texto:   #8a94a6;
-            --radio: 14px;
+            --fondo: #eef1f6; --tarjeta: #ffffff; --borde: #dbe3ee;
+            --navy: #134a8e; --navy-oscuro: #0d3a75; --naranja: #e8a020;
+            --verde: #18a558; --verde-suave: #e6f4ec; --rojo: #d93838; --rojo-suave: #fdecec;
+            --azul-sync: #1b6fd6; --azul-suave: #e8f1fd; --gris-texto: #8a94a6; --radio: 14px;
         }
-
         * { box-sizing: border-box; }
         html, body {
             height: 100%; margin: 0; padding: 0; overflow: hidden;
@@ -36,37 +25,28 @@
             font-family: -apple-system, "Segoe UI", "Trebuchet MS", Arial, sans-serif;
             overscroll-behavior: none; -webkit-tap-highlight-color: transparent;
         }
+        .pantalla-oculta { display: none !important; }
 
+        /* ============ VISTAS MÓVILES (login + ronda) ============ */
         .container {
             width: 100%; max-width: 480px; height: 100%; margin: 0 auto;
             padding: 12px; padding-bottom: env(safe-area-inset-bottom, 16px);
             display: flex; flex-direction: column; gap: 10px; color: var(--navy);
         }
-
-        /* --- VISTA PRINCIPAL (TRACKER) --- */
         .header-card { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: var(--radio); padding: 12px 16px; flex-shrink: 0; }
         .brand { display: flex; align-items: baseline; gap: 8px; }
         .brand .logo-text { font-size: 20px; font-weight: 900; font-style: italic; color: var(--navy-oscuro); }
         .brand .brand-sub { font-size: 13px; font-weight: 700; letter-spacing: 1px; color: var(--navy); text-transform: uppercase; }
-        
         .gps-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 12px; font-weight: 700; }
         .gps-row .gps-label { color: var(--navy); text-transform: uppercase; }
         .gps-row .gps-label.buscando { color: var(--naranja); }
         .gps-row .gps-coords { color: var(--navy-oscuro); font-weight: 800; }
-
-        /* Fila del bloqueo de sesión */
-        .lock-row {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-top: 6px; font-size: 12px; font-weight: 800;
-            color: var(--rojo); text-transform: uppercase;
-        }
+        .usuario-row { margin-top: 6px; font-size: 12px; font-weight: 800; color: var(--navy-oscuro); }
+        .lock-row { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 12px; font-weight: 800; color: var(--rojo); text-transform: uppercase; }
         .lock-row.desbloqueado { color: var(--verde); }
         .lock-row .lock-restante { font-variant-numeric: tabular-nums; color: var(--navy-oscuro); }
 
-        .server-status-bar {
-            border-radius: var(--radio); padding: 12px; text-align: center; font-size: 13px; font-weight: 800;
-            letter-spacing: .5px; text-transform: uppercase; border: 1px solid var(--borde); transition: all .3s ease; flex-shrink: 0;
-        }
+        .server-status-bar { border-radius: var(--radio); padding: 12px; text-align: center; font-size: 13px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; border: 1px solid var(--borde); transition: all .3s ease; flex-shrink: 0; }
         .server-online  { background: var(--verde-suave); color: var(--verde);    border-color: #bfe5d0; }
         .server-offline { background: var(--rojo-suave);  color: var(--rojo);     border-color: #f3c9c9; }
         .server-syncing { background: var(--azul-suave);  color: var(--azul-sync);border-color: #c4dcf8; }
@@ -77,6 +57,17 @@
         .info-card .valor { font-size: 24px; font-weight: 900; color: var(--navy-oscuro); font-variant-numeric: tabular-nums; }
         .info-card .etiqueta { font-size: 12px; color: var(--gris-texto); font-weight: 600; margin-top: 4px; }
 
+        .login-card { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: var(--radio); padding: 20px 18px; flex-shrink: 0; }
+        .login-title { font-size: 14px; font-weight: 900; letter-spacing: 1px; color: var(--navy); text-transform: uppercase; margin-bottom: 16px; }
+        .login-label { display: block; font-size: 13px; font-weight: 800; color: var(--navy); margin-bottom: 6px; }
+        .login-input { width: 100%; padding: 14px; font-size: 16px; color: var(--navy-oscuro); border: 1.5px solid var(--borde); border-radius: 10px; outline: none; margin-bottom: 14px; font-family: inherit; background: #fff; }
+        .login-input:focus { border-color: var(--navy); }
+        .btn-ingresar { width: 100%; padding: 16px; background: var(--navy-oscuro); color: #fff; border: none; border-radius: 999px; font-size: 17px; font-weight: 900; cursor: pointer; margin-top: 4px; }
+        .btn-ingresar:disabled { background: var(--gris-texto); }
+        .login-nota { text-align: center; font-size: 13px; color: var(--gris-texto); font-weight: 600; margin-top: 14px; }
+        .login-error { display: none; margin-top: 12px; background: var(--rojo-suave); color: var(--rojo); border: 1px solid #f3c9c9; border-radius: 10px; padding: 10px 14px; font-size: 13px; font-weight: 700; text-align: center; }
+        .login-error.visible { display: block; }
+
         .timer-card { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: var(--radio); width: 100%; padding: 20px 16px; text-align: center; flex-shrink: 0; }
         .timer-card .timer-label { display: inline-block; background: var(--navy); color: #fff; font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; padding: 6px 16px; border-radius: 999px; margin-bottom: 14px; }
         .timer-card .timer-valor { font-size: 44px; font-weight: 900; color: var(--navy-oscuro); font-variant-numeric: tabular-nums; line-height: 1; }
@@ -86,7 +77,6 @@
         .lista-header { padding: 10px 14px; font-size: 12px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--navy); border-bottom: 1px solid var(--borde); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .lista-body { flex: 1; overflow-y: auto; padding: 4px 14px 12px; }
         .lista-vacia { height: 100%; display: flex; justify-content: center; align-items: center; color: var(--gris-texto); font-size: 14px; font-weight: 600; }
-        
         .coord-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 2px; border-bottom: 1px dashed var(--borde); font-size: 13px; }
         .coord-hora { color: var(--gris-texto); font-weight: 700; flex-shrink: 0; }
         .coord-valor { color: var(--navy-oscuro); font-weight: 800; flex: 1; text-align: center; }
@@ -94,78 +84,102 @@
         .coord-estado.pendiente { color: var(--naranja); }
         .coord-estado.enviado   { color: var(--verde); }
 
-        .btn-reportar {
-            background-color: #2b5c9c; color: white; border: none; border-radius: 10px; padding: 16px;
-            font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; flex-shrink: 0;
-            box-shadow: 0 4px 10px rgba(13, 58, 117, 0.2); transition: background-color 0.2s;
-            position: relative;
-        }
+        .btn-reportar { background-color: #2b5c9c; color: white; border: none; border-radius: 10px; padding: 16px; font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; flex-shrink: 0; box-shadow: 0 4px 10px rgba(13,58,117,.2); position: relative; }
         .btn-reportar:active { background-color: var(--navy-oscuro); }
-
-        /* Badge de novedades pendientes en el botón Reportar */
-        .badge-pendientes {
-            display: none; position: absolute; top: -8px; right: -4px;
-            background: var(--naranja); color: #fff; font-size: 12px; font-weight: 900;
-            min-width: 24px; height: 24px; line-height: 24px; border-radius: 999px;
-            padding: 0 7px; box-shadow: 0 2px 6px rgba(0,0,0,.25);
-        }
+        .badge-pendientes { display: none; position: absolute; top: -8px; right: -4px; background: var(--naranja); color: #fff; font-size: 12px; font-weight: 900; min-width: 24px; height: 24px; line-height: 24px; border-radius: 999px; padding: 0 7px; box-shadow: 0 2px 6px rgba(0,0,0,.25); }
         .badge-pendientes.visible { display: inline-block; }
 
-        /* --- VISTA DE NOVEDADES Y CÁMARA --- */
-        .pantalla-oculta { display: none !important; }
-
         .btn-volver { background: transparent; border: none; color: var(--rojo); font-weight: 800; font-size: 13px; cursor: pointer; padding: 0; }
-        
-        .daily-row {
-            display: flex; align-items: center; justify-content: space-between; background-color: #ffffff;
-            border: 1.5px solid var(--navy); border-radius: 10px; padding: 14px 15px; margin-top: 15px;
-            cursor: pointer; width: 100%; box-sizing: border-box; flex-shrink: 0;
-        }
+        .daily-row { display: flex; align-items: center; justify-content: space-between; background: #fff; border: 1.5px solid var(--navy); border-radius: 10px; padding: 14px 15px; margin-top: 15px; cursor: pointer; width: 100%; flex-shrink: 0; }
         .camera-icon { font-size: 24px; }
         .daily-text { color: var(--navy); font-weight: bold; font-size: 16px; text-align: center; flex-grow: 1; }
         .checkbox-icon { width: 26px; height: 26px; border: 1.5px solid var(--navy); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--verde); font-weight: bold; font-size: 18px; }
-
-        .image-placeholder { width: 100%; min-height: 200px; background-color: #f3f5f7; border: 1.5px dashed var(--borde); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--gris-texto); font-weight: bold; font-size: 16px; margin: 15px 0; }
+        .image-placeholder { width: 100%; min-height: 200px; background: #f3f5f7; border: 1.5px dashed var(--borde); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--gris-texto); font-weight: bold; font-size: 16px; margin: 15px 0; }
         #capturedImageContainer { width: 100%; margin: 15px 0; display: none; text-align: center; }
-        #finalPhoto { max-width: 100%; border-radius: 10px; border: 1.5px solid var(--navy); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        #retryPhotoBtn { margin-top: 10px; background-color: var(--rojo); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; }
-
+        #finalPhoto { max-width: 100%; border-radius: 10px; border: 1.5px solid var(--navy); }
+        #retryPhotoBtn { margin-top: 10px; background: var(--rojo); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; }
         .details-textarea { width: 100%; min-height: 120px; border: 1.5px solid var(--borde); border-radius: 10px; padding: 15px; resize: none; font-size: 15px; color: var(--navy-oscuro); font-family: inherit; margin-bottom: 15px; outline: none; }
         .details-textarea:focus { border-color: var(--navy); }
-        
-        .submit-btn { width: 100%; padding: 16px; background-color: var(--verde); color: white; border: none; border-radius: 10px; font-size: 17px; font-weight: bold; cursor: pointer; transition: filter 0.2s; }
-        .submit-btn:disabled { background-color: var(--gris-texto); }
-        .submit-btn:active { filter: brightness(0.9); }
-
-        /* Aviso de modo offline dentro del formulario de novedad */
-        .aviso-offline {
-            display: none; background: var(--rojo-suave); color: var(--rojo); border: 1px solid #f3c9c9;
-            border-radius: 10px; padding: 10px 14px; font-size: 13px; font-weight: 700; text-align: center;
-            margin-top: 12px;
-        }
+        .submit-btn { width: 100%; padding: 16px; background: var(--verde); color: white; border: none; border-radius: 10px; font-size: 17px; font-weight: bold; cursor: pointer; }
+        .submit-btn:disabled { background: var(--gris-texto); }
+        .aviso-offline { display: none; background: var(--rojo-suave); color: var(--rojo); border: 1px solid #f3c9c9; border-radius: 10px; padding: 10px 14px; font-size: 13px; font-weight: 700; text-align: center; margin-top: 12px; }
         .aviso-offline.visible { display: block; }
 
-        /* OVERLAY CÁMARA OSCURA */
-        #cameraOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #000000; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+        #cameraOverlay { position: fixed; inset: 0; background: #000; display: none; flex-direction: column; z-index: 1000; }
         #cameraOverlay.active { display: flex; }
         .camera-container { width: 100%; height: 100%; display: flex; flex-direction: column; position: relative; }
         #liveVideo { width: 100%; height: 100%; object-fit: cover; }
         #photoCanvas { display: none; }
         .camera-controls { position: absolute; bottom: 40px; left: 0; width: 100%; display: flex; justify-content: center; gap: 20px; }
         .camera-btn { padding: 15px 30px; border-radius: 30px; font-weight: bold; font-size: 16px; cursor: pointer; border: none; }
-        .capture-btn { background-color: #ffffff; color: #000000; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        .close-camera-btn { background-color: var(--rojo); color: white; }
+        .capture-btn { background: #fff; color: #000; box-shadow: 0 4px 15px rgba(0,0,0,.5); }
+        .close-camera-btn { background: var(--rojo); color: white; }
+
+        /* ============ VISTA SUPERVISOR (PC) ============ */
+        #vistaSupervisor { display: none; height: 100%; flex-direction: column; }
+        #vistaSupervisor.activo { display: flex; }
+        .topbar { background: var(--tarjeta); border-bottom: 1px solid var(--borde); padding: 10px 20px; display: flex; align-items: center; gap: 18px; flex-shrink: 0; flex-wrap: wrap; }
+        .topbar .sep { flex: 1; }
+        .topbar .dato { font-size: 13px; font-weight: 800; color: var(--navy); }
+        .topbar select { padding: 8px 12px; border: 1.5px solid var(--borde); border-radius: 8px; font-size: 13px; font-weight: 700; color: var(--navy-oscuro); outline: none; }
+        .estado-sync { font-size: 12px; font-weight: 800; color: var(--verde); }
+        .btn-salir { padding: 9px 14px; background: transparent; color: var(--rojo); border: 1.5px solid var(--rojo); border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 13px; }
+
+        .main { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 400px; gap: 12px; padding: 12px; }
+        .mapa-card { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: var(--radio); overflow: hidden; display: flex; flex-direction: column; }
+        .panel-titulo { padding: 10px 16px; font-size: 12px; font-weight: 900; letter-spacing: .5px; text-transform: uppercase; color: var(--navy); border-bottom: 1px solid var(--borde); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        #mapa { flex: 1; min-height: 0; }
+        .leyenda { padding: 8px 16px; border-top: 1px solid var(--borde); display: flex; flex-wrap: wrap; gap: 14px; flex-shrink: 0; }
+        .leyenda-item { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; }
+        .leyenda-color { width: 14px; height: 14px; border-radius: 4px; }
+        .novedades-card { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: var(--radio); display: flex; flex-direction: column; min-height: 0; }
+        .novedades-body { flex: 1; overflow-y: auto; padding: 12px; }
+        .nov-vacia { text-align: center; color: var(--gris-texto); font-weight: 700; font-size: 14px; padding: 40px 0; }
+        .nov-item { border: 1px solid var(--borde); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+        .nov-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .nov-usuario { font-size: 13px; font-weight: 900; color: var(--navy-oscuro); }
+        .nov-centro { font-size: 11px; font-weight: 800; color: #fff; background: var(--navy); border-radius: 999px; padding: 3px 10px; }
+        .nov-fecha { font-size: 12px; color: var(--gris-texto); font-weight: 700; margin-bottom: 8px; }
+        .nov-detalle { font-size: 14px; color: var(--navy-oscuro); margin-bottom: 10px; line-height: 1.4; }
+        .nov-foto { width: 100%; border-radius: 10px; border: 1px solid var(--borde); display: block; }
+        .nov-gps { font-size: 11px; color: var(--gris-texto); font-weight: 700; margin-top: 8px; }
+        .nov-gps a { color: var(--navy); }
+        @media (max-width: 980px) { .main { grid-template-columns: 1fr; grid-template-rows: 55% 45%; } }
     </style>
 </head>
-<body onload="iniciarSistema()">
+<body>
 
-    <div class="container" id="vistaTracker">
+    <!-- ================= LOGIN (ÚNICO PARA TODOS) ================= -->
+    <div class="container" id="vistaLogin">
         <div class="header-card">
-            <div class="brand">
-                <span class="logo-text">AIR</span>
-                <span class="brand-sub">Control</span>
+            <div class="brand"><span class="logo-text">AIR</span><span class="brand-sub">Control</span></div>
+            <div class="gps-row">
+                <span class="gps-label buscando" id="gpsLabelLogin">📍 GPS: Buscando señal...</span>
+                <span class="gps-coords" id="gpsCoordsLogin">---, ---</span>
             </div>
-            <div class="gps-row" id="gpsBar">
+        </div>
+        <div class="grid-row">
+            <div class="info-card"><div class="valor" id="txtHoraLogin">--:--:--</div><div class="etiqueta">Hora</div></div>
+            <div class="info-card"><div class="valor" id="txtFechaLogin">--/--/----</div><div class="etiqueta">Fecha</div></div>
+        </div>
+        <div class="login-card">
+            <div class="login-title">Acceso de Usuario</div>
+            <label class="login-label" for="inpUsuario">Usuario</label>
+            <input class="login-input" id="inpUsuario" type="text" placeholder="Escribe tu usuario" autocomplete="username" autocapitalize="none">
+            <label class="login-label" for="inpClave">Contraseña</label>
+            <input class="login-input" id="inpClave" type="password" placeholder="Escribe tu contraseña" autocomplete="current-password">
+            <button class="btn-ingresar" id="btnIngresar">→] Ingresar</button>
+            <div class="login-nota">El acceso registra fecha, hora y ubicación GPS.</div>
+            <div class="login-error" id="loginError"></div>
+        </div>
+    </div>
+
+    <!-- ================= VISTA RONDA ================= -->
+    <div class="container pantalla-oculta" id="vistaTracker">
+        <div class="header-card">
+            <div class="brand"><span class="logo-text">AIR</span><span class="brand-sub">Control</span></div>
+            <div class="usuario-row" id="usuarioInfo">👤 ---</div>
+            <div class="gps-row">
                 <span class="gps-label buscando" id="gpsLabel">📍 GPS: Buscando señal...</span>
                 <span class="gps-coords" id="gpsCoords">---, ---</span>
             </div>
@@ -174,73 +188,58 @@
                 <span class="lock-restante" id="lockRestante">--:--:--</span>
             </div>
         </div>
-
         <div id="serverStatus" class="server-status-bar server-loading">🟠 Iniciando sistema...</div>
-
         <div class="grid-row">
             <div class="info-card"><div class="valor" id="txtHora">--:--:--</div><div class="etiqueta">Hora</div></div>
             <div class="info-card"><div class="valor" id="txtFecha">--/--/----</div><div class="etiqueta">Fecha</div></div>
         </div>
-
         <div class="timer-card">
             <div class="timer-label">Tiempo de rastreo</div>
             <div class="timer-valor" id="cronometro">00:00:00</div>
-            <div class="timer-sub" id="resumenRegistros">0 puntos registrados · 0 pendientes</div>
+            <div class="timer-sub" id="resumenRegistros">0 puntos · 0 pendientes</div>
         </div>
-
         <div class="lista-card">
             <div class="lista-header">
                 <span>Lista de coordenadas</span>
-                <span class="lista-contador" id="listaContador">0 puntos</span>
+                <span id="listaContador">0 puntos</span>
             </div>
             <div class="lista-body" id="listaBody">
                 <div class="lista-vacia" id="listaVacia">Esperando primera coordenada...</div>
             </div>
         </div>
-
-        <button class="btn-reportar" onclick="abrirNovedad()">
+        <button class="btn-reportar" id="btnReportar">
             Reportar Novedad
             <span class="badge-pendientes" id="badgeNovedades">0</span>
         </button>
     </div>
 
+    <!-- ================= VISTA NOVEDAD (solo ronda) ================= -->
     <div class="container pantalla-oculta" id="vistaNovedad">
-        <div class="header-card" style="display: flex; justify-content: space-between; align-items: center;">
-            <div class="brand">
-                <span class="brand-sub" style="font-size:15px;">REGISTRO DE NOVEDAD</span>
-            </div>
-            <button class="btn-volver" onclick="cerrarNovedad()">✕ VOLVER</button>
+        <div class="header-card" style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="brand"><span class="brand-sub" style="font-size:15px;">REGISTRO DE NOVEDAD</span></div>
+            <button class="btn-volver" id="btnVolver">✕ VOLVER</button>
         </div>
-
-        <div class="lista-card" style="padding: 15px; border: none; overflow-y: auto; background: transparent;">
-
-            <div id="avisoOffline" class="aviso-offline">
-                📡 Sin conexión: el reporte se guardará en el dispositivo y se enviará automáticamente al recuperar internet.
-            </div>
-            
+        <div class="lista-card" style="padding:15px; border:none; overflow-y:auto; background:transparent;">
+            <div id="avisoOffline" class="aviso-offline">📡 Sin conexión: el reporte se guardará en el dispositivo y se enviará automáticamente al recuperar internet.</div>
             <button type="button" class="daily-row" id="startCameraBtn">
                 <span class="camera-icon">📸</span>
                 <span class="daily-text" id="uploadLabel">Tomar Evidencia</span>
                 <span class="checkbox-icon" id="photoCheckmark"></span>
             </button>
-
             <div id="imagePlaceholder" class="image-placeholder">Esperando Imagen...</div>
-            
             <div id="capturedImageContainer">
                 <img id="finalPhoto" alt="Foto capturada">
                 <button type="button" id="retryPhotoBtn">Eliminar y Reintentar</button>
             </div>
-
-            <textarea id="txtDetalle" class="details-textarea" placeholder="Redacte la novedad encontrada aquí..." required></textarea>
-            
-            <button type="button" id="btnSubmitNovedad" class="submit-btn" onclick="enviarNovedad()">Enviar Reporte</button>
+            <textarea id="txtDetalle" class="details-textarea" placeholder="Redacte la novedad encontrada aquí..."></textarea>
+            <button type="button" id="btnSubmitNovedad" class="submit-btn">Enviar Reporte</button>
         </div>
     </div>
 
     <div id="cameraOverlay">
         <div class="camera-container">
             <video id="liveVideo" autoplay playsinline></video>
-            <canvas id="photoCanvas"></canvas> 
+            <canvas id="photoCanvas"></canvas>
             <div class="camera-controls">
                 <button type="button" class="camera-btn close-camera-btn" id="closeCameraBtn">Cancelar</button>
                 <button type="button" class="camera-btn capture-btn" id="captureBtn">Capturar Foto</button>
@@ -248,616 +247,633 @@
         </div>
     </div>
 
-    <script>
+    <!-- ================= VISTA SUPERVISOR ================= -->
+    <div id="vistaSupervisor">
+        <div class="topbar">
+            <div class="brand"><span class="logo-text">AIR</span><span class="brand-sub">Control · Monitoreo</span></div>
+            <span class="dato" id="supNombre">👤 ---</span>
+            <div class="sep"></div>
+            <span class="dato">Centro:</span>
+            <select id="filtroCentro"><option value="">Todos</option></select>
+            <span class="estado-sync" id="estadoSync">● Tiempo real activo</span>
+            <button class="btn-salir" id="btnSalirSup">Cerrar sesión</button>
+        </div>
+        <div class="main">
+            <div class="mapa-card">
+                <div class="panel-titulo">
+                    <span>Rutas de rondas en tiempo real</span>
+                    <span id="contadorRutas">0 rondas</span>
+                </div>
+                <div id="mapa"></div>
+                <div class="leyenda" id="leyenda"></div>
+            </div>
+            <div class="novedades-card">
+                <div class="panel-titulo">
+                    <span>Novedades reportadas</span>
+                    <span id="contadorNov">0</span>
+                </div>
+                <div class="novedades-body" id="novedadesBody">
+                    <div class="nov-vacia">Esperando novedades...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script type="module">
     "use strict";
 
-    // 🔴 URL DE GOOGLE APPS SCRIPT ACTUALIZADA
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxmxGPKwqgvUS9u0Va8wvwlCVeu0aXklSVFOqYrnhGezjkqxOC6V0PjBtV4SREwE4T5Wg/exec"; 
+    // ============================================================
+    // FIREBASE
+    // ============================================================
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import {
+        initializeFirestore, persistentLocalCache,
+        collection, doc, getDoc, getDocs, addDoc, serverTimestamp,
+        query, where, orderBy, limit, onSnapshot
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-    // --- VARIABLES GLOBALES DEL TRACKER ---
-    const KEY_COLA       = 'pendingTracking';  
-    const KEY_HISTORIAL  = 'trackingLocal';    
-    const KEY_LOCALDB    = 'localDB';          
-    const MAX_HISTORIAL  = 2000;   
-    const LOTE_MAXIMO    = 50;     
-    const INTERVALO_GPS  = 30000;  
-    const INTERVALO_SYNC = 60000;  
+    const firebaseConfig = {
+        apiKey: "AIzaSyBVi1ixRfeLwtNgV3jBv3VZYtH7SJvtLKI",
+        authDomain: "rutacontrol-ede96.firebaseapp.com",
+        projectId: "rutacontrol-ede96",
+        storageBucket: "rutacontrol-ede96.firebasestorage.app",
+        messagingSenderId: "847237886237",
+        appId: "1:847237886237:web:81fc6b36d62ed74a8e71f4"
+    };
+    const DOMINIO_INTERNO = "@aircontrol.app";
 
+    const app  = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = initializeFirestore(app, { localCache: persistentLocalCache() });
+
+    // ============================================================
+    // ESTADO GLOBAL Y UTILIDADES
+    // ============================================================
+    const KEY_LOCK   = 'lockStartTime';
+    const KEY_PERFIL = 'perfilCache';
+    const LOCK_DURACION = 90 * 60 * 1000;
+    const INTERVALO_GPS = 30000;
+
+    let sesion = null;
     let ultimaLat = null, ultimaLon = null;
     let appStartTime = Date.now();
-    let totalRegistrados = 0;
-    let sincronizando = false;
+    let totalRegistrados = 0, pendientes = 0, novedadesPendientes = 0;
+    let bloqueoActivo = false;
+    let rondaIniciada = false, supervisorIniciado = false;
+
+    const $ = id => document.getElementById(id);
+    const pad = n => n.toString().padStart(2, '0');
+    const getFecha = () => { const d = new Date(); return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`; };
+    const getHora  = () => { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; };
+
+    function actualizarReloj() {
+        const h = getHora(), f = getFecha();
+        ['txtHora','txtHoraLogin'].forEach(id => { const el = $(id); if (el) el.innerText = h; });
+        ['txtFecha','txtFechaLogin'].forEach(id => { const el = $(id); if (el) el.innerText = f; });
+    }
+    setInterval(actualizarReloj, 1000); actualizarReloj();
+
+    function ocultarTodasLasVistas() {
+        ['vistaLogin','vistaTracker','vistaNovedad'].forEach(id => $(id).classList.add('pantalla-oculta'));
+        $('vistaSupervisor').classList.remove('activo');
+    }
 
     // ============================================================
-    // 🆕 INDEXEDDB: ALMACENAMIENTO LOCAL DE NOVEDADES (FOTO + TEXTO)
-    // Se usa IndexedDB porque las fotos en Base64 superan
-    // fácilmente el límite (~5MB) de localStorage.
+    // LOGIN ÚNICO → RUTEO POR PERFIL
     // ============================================================
-    const DB_NAME         = 'airControlDB';
-    const DB_VERSION      = 1;
-    const STORE_NOVEDADES = 'novedadesPendientes';
+    function errorLogin(msg) { const d = $('loginError'); d.innerText = msg; d.classList.add('visible'); }
 
-    let dbInstancia = null;
-    let novedadesPendientesCount = 0;   // caché del contador para la UI
-    let sincronizandoNovedades = false;
+    async function hacerLogin() {
+        let usuario = $('inpUsuario').value.trim().toLowerCase();
+        const clave = $('inpClave').value.trim();
+        $('loginError').classList.remove('visible');
+        if (!usuario || !clave) { errorLogin('Ingrese usuario y contraseña.'); return; }
+        if (!navigator.onLine)  { errorLogin('Se requiere internet para iniciar sesión la primera vez.'); return; }
 
-    function abrirDB() {
-        return new Promise((resolve, reject) => {
-            if (dbInstancia) { resolve(dbInstancia); return; }
-            const req = indexedDB.open(DB_NAME, DB_VERSION);
-            req.onupgradeneeded = (e) => {
-                const db = e.target.result;
-                if (!db.objectStoreNames.contains(STORE_NOVEDADES)) {
-                    db.createObjectStore(STORE_NOVEDADES, { keyPath: 'id', autoIncrement: true });
-                }
-            };
-            req.onsuccess = () => { dbInstancia = req.result; resolve(dbInstancia); };
-            req.onerror   = () => reject(req.error);
+        // 🆕 Tolerante: si la persona escribió el correo completo
+        // ("ronda1@aircontrol.app"), se queda solo con "ronda1" para
+        // evitar el doble dominio (ronda1@...app@...app = correo inválido).
+        if (usuario.includes('@')) usuario = usuario.split('@')[0];
+
+        const btn = $('btnIngresar');
+        btn.disabled = true; btn.innerText = 'Verificando...';
+        try {
+            await signInWithEmailAndPassword(auth, usuario + DOMINIO_INTERNO, clave);
+        } catch (e) {
+            const c = e.code || '';
+            if (c.includes('invalid-credential') || c.includes('wrong-password') || c.includes('user-not-found'))
+                errorLogin('Usuario o contraseña incorrectos.');
+            else if (c.includes('invalid-email'))
+                errorLogin('Formato de usuario inválido. Escriba solo su usuario, sin @.');
+            else if (c.includes('too-many-requests'))
+                errorLogin('Demasiados intentos fallidos. Espere unos minutos.');
+            else if (c.includes('network-request-failed'))
+                errorLogin('Sin conexión con el servidor. Verifique su internet.');
+            else if (c.includes('user-disabled'))
+                errorLogin('Este usuario fue deshabilitado por el administrador.');
+            else
+                errorLogin('Error de autenticación (' + c + '). Intente de nuevo.');
+        } finally {
+            btn.disabled = false; btn.innerText = '→] Ingresar';
+        }
+    }
+    $('btnIngresar').addEventListener('click', hacerLogin);
+    $('inpClave').addEventListener('keydown', e => { if (e.key === 'Enter') hacerLogin(); });
+
+    onAuthStateChanged(auth, async (user) => {
+        if (!user) { ocultarTodasLasVistas(); $('vistaLogin').classList.remove('pantalla-oculta'); return; }
+
+        // Lee el perfil del usuario en Firestore (con respaldo en caché local
+        // para que un RONDA pueda reingresar en campo sin señal).
+        let perfil = null;
+        try {
+            const snap = await getDoc(doc(db, 'usuarios', user.uid));
+            if (snap.exists()) perfil = snap.data();
+        } catch (e) { }
+        if (!perfil) {
+            const cache = localStorage.getItem(KEY_PERFIL);
+            if (cache) { try { const p = JSON.parse(cache); if (p._uid === user.uid) perfil = p; } catch (e) { } }
+        }
+        if (!perfil) {
+            errorLogin('Su usuario no tiene perfil asignado en el sistema. Contacte al administrador.');
+            await signOut(auth);
+            return;
+        }
+
+        sesion = { uid: user.uid, ...perfil };
+        localStorage.setItem(KEY_PERFIL, JSON.stringify({ ...perfil, _uid: user.uid }));
+
+        // 🔀 RUTEO POR PERFIL — cada perfil solo ve SU interfaz:
+        const rol = String(perfil.perfil || '').toUpperCase().trim();
+        if (rol === 'RONDA')           entrarRonda();
+        else if (rol === 'SUPERVISOR') entrarSupervisor();
+        else {
+            errorLogin('Perfil no reconocido: ' + rol + '. Contacte al administrador.');
+            await signOut(auth);
+        }
+    });
+
+    function registrarAcceso() {
+        addDoc(collection(db, 'accesos'), {
+            fecha: getFecha(), hora: getHora(),
+            usuario: sesion.usuario, nombre: sesion.nombre,
+            perfil: sesion.perfil, centro: sesion.centro,
+            lat: ultimaLat || '0', lon: ultimaLon || '0',
+            ts: serverTimestamp()
+        }).catch(() => {});
+    }
+
+    // ============================================================
+    // ███ INTERFAZ RONDA ███
+    // (el supervisor NUNCA llega aquí: no se inicia GPS de rastreo,
+    //  ni bloqueo, ni escritura de puntos para perfiles no-RONDA)
+    // ============================================================
+    function entrarRonda() {
+        ocultarTodasLasVistas();
+        $('vistaTracker').classList.remove('pantalla-oculta');
+        $('usuarioInfo').innerText = `👤 ${sesion.nombre} · ${sesion.centro} · ${sesion.hoja}`;
+        if (rondaIniciada) return;
+        rondaIniciada = true;
+
+        registrarAcceso();
+        gestionarGPS();
+        activarBloqueo();
+        solicitarWakeLock();
+        registrarRecargaSiAplica();
+        setInterval(() => {
+            if (!ultimaLat || !ultimaLon) return;
+            registrarPunto('');
+        }, INTERVALO_GPS);
+        setInterval(actualizarCronometro, 1000);
+        setInterval(actualizarUIBloqueo, 1000);
+        actualizarEstadoUI();
+    }
+
+    function gestionarGPS() {
+        if (!navigator.geolocation) return;
+        navigator.geolocation.watchPosition(
+            pos => {
+                ultimaLat = pos.coords.latitude.toFixed(6);
+                ultimaLon = pos.coords.longitude.toFixed(6);
+                pintarGPS('📍 GPS: Señal fijada', false, `${ultimaLat}, ${ultimaLon}`);
+            },
+            ()  => pintarGPS('⚠️ Buscando satélites...', true, null),
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    }
+    function pintarGPS(texto, buscando, coords) {
+        [['gpsLabel','gpsCoords'],['gpsLabelLogin','gpsCoordsLogin']].forEach(([l,c]) => {
+            const lab = $(l), val = $(c);
+            if (lab) { lab.innerText = texto; lab.classList.toggle('buscando', buscando); }
+            if (val && coords) val.innerText = coords;
         });
     }
+    // El GPS también corre en la pantalla de login (para registrar el acceso con ubicación)
+    gestionarGPS();
 
-    function guardarNovedadLocal(payload) {
-        return abrirDB().then(db => new Promise((resolve, reject) => {
-            const tx = db.transaction(STORE_NOVEDADES, 'readwrite');
-            tx.objectStore(STORE_NOVEDADES).add({ payload: payload, creadoEn: Date.now() });
-            tx.oncomplete = () => resolve(true);
-            tx.onerror    = () => reject(tx.error);
-        }));
-    }
-
-    function obtenerNovedadesPendientes() {
-        return abrirDB().then(db => new Promise((resolve, reject) => {
-            const tx  = db.transaction(STORE_NOVEDADES, 'readonly');
-            const req = tx.objectStore(STORE_NOVEDADES).getAll();
-            req.onsuccess = () => resolve(req.result || []);
-            req.onerror   = () => reject(req.error);
-        }));
-    }
-
-    function eliminarNovedadLocal(id) {
-        return abrirDB().then(db => new Promise((resolve, reject) => {
-            const tx = db.transaction(STORE_NOVEDADES, 'readwrite');
-            tx.objectStore(STORE_NOVEDADES).delete(id);
-            tx.oncomplete = () => resolve(true);
-            tx.onerror    = () => reject(tx.error);
-        }));
-    }
-
-    function contarNovedadesPendientes() {
-        return abrirDB().then(db => new Promise((resolve, reject) => {
-            const tx  = db.transaction(STORE_NOVEDADES, 'readonly');
-            const req = tx.objectStore(STORE_NOVEDADES).count();
-            req.onsuccess = () => resolve(req.count !== undefined ? req.count : req.result);
-            req.onerror   = () => reject(req.error);
-        }));
-    }
-
-    async function refrescarContadorNovedades() {
-        try {
-            novedadesPendientesCount = await contarNovedadesPendientes();
-        } catch (e) {
-            novedadesPendientesCount = 0;
-        }
-        const badge = document.getElementById('badgeNovedades');
-        badge.innerText = novedadesPendientesCount;
-        badge.classList.toggle('visible', novedadesPendientesCount > 0);
+    function registrarEnFirestore(col, datos, filaUI) {
+        pendientes++;
+        if (datos.fotoBase64) { novedadesPendientes++; }
         actualizarResumen();
-    }
-
-    // Envío individual de una novedad al servidor. Devuelve true solo si el
-    // servidor confirmó la recepción (ok: true).
-    async function enviarNovedadServidor(payload) {
-        try {
-            const resp = await fetch(SCRIPT_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(payload)
-            });
-            if (!resp.ok) return false;
-            const result = await resp.json();
-            return result && result.ok === true;
-        } catch (e) {
-            return false;
-        }
-    }
-
-    // Sube una por una las novedades guardadas en el dispositivo.
-    // Cada novedad se borra de IndexedDB ÚNICAMENTE cuando el servidor
-    // confirma — si la conexión se cae a mitad de la subida, lo que
-    // falta queda intacto para el próximo intento.
-    async function sincronizarNovedades() {
-        if (sincronizandoNovedades || !navigator.onLine) return;
-
-        let pendientes;
-        try { pendientes = await obtenerNovedadesPendientes(); }
-        catch (e) { return; }
-        if (pendientes.length === 0) return;
-
-        sincronizandoNovedades = true;
-        try {
-            for (let i = 0; i < pendientes.length; i++) {
-                mostrarEstado('syncing', `🔄 Subiendo novedades (${pendientes.length - i} restantes)...`);
-                const ok = await enviarNovedadServidor(pendientes[i].payload);
-                if (!ok) {
-                    mostrarEstado('offline', `⚠️ Error al subir novedades`);
-                    return;
+        addDoc(col, datos)
+            .then(() => {
+                pendientes = Math.max(0, pendientes - 1);
+                if (datos.fotoBase64) novedadesPendientes = Math.max(0, novedadesPendientes - 1);
+                if (filaUI) marcarEnviado(filaUI);
+                actualizarResumen();
+            })
+            .catch(() => {
+                pendientes = Math.max(0, pendientes - 1);
+                if (datos.fotoBase64) novedadesPendientes = Math.max(0, novedadesPendientes - 1);
+                if (filaUI) {
+                    const est = filaUI.querySelector('.coord-estado');
+                    if (est) { est.textContent = '✗ Rechazado'; est.style.color = 'var(--rojo)'; }
                 }
-                await eliminarNovedadLocal(pendientes[i].id);
-                await refrescarContadorNovedades();
-            }
-            actualizarEstadoUI();
-        } finally {
-            sincronizandoNovedades = false;
-        }
+                actualizarResumen();
+            });
     }
 
-    // ============================================================
-    // 🆕 BLOQUEO DE SESIÓN (1.5 HORAS)
-    // Una vez abierta la app, durante 90 minutos:
-    //  - El botón "atrás" del navegador queda atrapado.
-    //  - Cerrar o recargar la pestaña pide confirmación al usuario.
-    //  - El contador persiste en localStorage: recargar NO lo reinicia.
-    // Pasado el tiempo, todo se libera automáticamente.
-    // ============================================================
-    const KEY_LOCK      = 'lockStartTime';
-    const LOCK_DURACION = 90 * 60 * 1000;   // 1.5 horas en milisegundos
-    let bloqueoActivo = false;
+    function registrarPunto(evento) {
+        const fila = agregarEntradaLista({
+            hora: getHora(),
+            texto: evento ? `⚠️ ${evento}` : `${ultimaLat}, ${ultimaLon}`,
+            esEvento: !!evento
+        });
+        totalRegistrados++;
+        registrarEnFirestore(collection(db, 'rondas', sesion.hoja, 'puntos'), {
+            lat: parseFloat(ultimaLat) || 0, lon: parseFloat(ultimaLon) || 0,
+            fecha: getFecha(), hora: getHora(),
+            evento: evento || '', usuario: sesion.usuario,
+            ts: serverTimestamp(), tsLocal: Date.now()
+        }, fila);
+    }
+
+    const MAX_LISTA = 100;
+    function agregarEntradaLista(info) {
+        const body = $('listaBody');
+        const vacio = $('listaVacia'); if (vacio) vacio.remove();
+        const div = document.createElement('div'); div.className = 'coord-item';
+        const hora = document.createElement('span'); hora.className = 'coord-hora'; hora.textContent = info.hora;
+        const valor = document.createElement('span'); valor.className = 'coord-valor'; valor.textContent = info.texto;
+        if (info.esEvento) valor.style.color = 'var(--rojo)';
+        const est = document.createElement('span'); est.className = 'coord-estado pendiente'; est.textContent = '⏳ Pendiente';
+        div.append(hora, valor, est); body.prepend(div);
+        while (body.children.length > MAX_LISTA) body.removeChild(body.lastChild);
+        return div;
+    }
+    function marcarEnviado(div) {
+        const est = div.querySelector('.coord-estado');
+        if (est) { est.className = 'coord-estado enviado'; est.textContent = '✓ Enviado'; }
+    }
+    function actualizarResumen() {
+        $('resumenRegistros').innerText = `${totalRegistrados} puntos · ${pendientes} pendientes`;
+        $('listaContador').innerText = `${totalRegistrados} puntos`;
+        const badge = $('badgeNovedades');
+        badge.innerText = novedadesPendientes;
+        badge.classList.toggle('visible', novedadesPendientes > 0);
+        actualizarEstadoUI();
+    }
+    function mostrarEstado(tipo, texto) {
+        const div = $('serverStatus');
+        div.innerText = texto; div.className = `server-status-bar server-${tipo}`;
+    }
+    function actualizarEstadoUI() {
+        if (!rondaIniciada) return;
+        if (!navigator.onLine) mostrarEstado('offline', `⚠️ Modo offline (${pendientes} pendientes)`);
+        else if (pendientes > 0) mostrarEstado('syncing', `🔄 Sincronizando (${pendientes} pendientes)...`);
+        else mostrarEstado('online', '🟢 Conexión con servidor: OK');
+    }
+    window.addEventListener('online',  () => { actualizarEstadoUI(); actualizarAvisoOffline(); });
+    window.addEventListener('offline', () => { actualizarEstadoUI(); actualizarAvisoOffline(); });
+
+    function actualizarCronometro() {
+        const s = Math.floor((Date.now() - appStartTime) / 1000);
+        $('cronometro').innerText = `${pad(Math.floor(s/3600))}:${pad(Math.floor((s%3600)/60))}:${pad(s%60)}`;
+    }
+
+    // --- WAKE LOCK + BLOQUEO + ANTI-RECARGA (solo RONDA) ---
+    let wakeLock = null;
+    async function solicitarWakeLock() { try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (e) { } }
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && rondaIniciada) solicitarWakeLock(); });
 
     function tiempoRestanteBloqueo() {
-        const inicio = parseInt(localStorage.getItem(KEY_LOCK) || '0', 10);
-        if (!inicio) return 0;
-        return Math.max(0, (inicio + LOCK_DURACION) - Date.now());
+        const ini = parseInt(localStorage.getItem(KEY_LOCK) || '0', 10);
+        return ini ? Math.max(0, (ini + LOCK_DURACION) - Date.now()) : 0;
     }
-
-    function manejarBeforeUnload(e) {
-        // Dispara el diálogo nativo "¿Salir del sitio?" del navegador
-        e.preventDefault();
-        e.returnValue = '';
-        return '';
-    }
-
+    function manejarBeforeUnload(e) { e.preventDefault(); e.returnValue = ''; return ''; }
     function manejarPopState() {
         if (!bloqueoActivo) return;
-        // Re-inyecta el estado para anular el botón "atrás"
-        history.pushState({ bloqueo: true }, '', location.href);
+        history.pushState({ b: 1 }, '', location.href);
         mostrarEstado('offline', '🔒 Sesión bloqueada: no es posible salir todavía');
         setTimeout(actualizarEstadoUI, 2500);
     }
-
-    // 🆕 Bloquea F5, Ctrl+R y Ctrl+Shift+R mientras la sesión esté bloqueada
     function bloquearTeclasRecarga(e) {
         if (!bloqueoActivo) return;
-        const tecla = (e.key || '').toLowerCase();
-        if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && tecla === 'r')) {
-            e.preventDefault();
-            e.stopPropagation();
+        const k = (e.key || '').toLowerCase();
+        if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && k === 'r')) {
+            e.preventDefault(); e.stopPropagation();
             mostrarEstado('offline', '🔒 Recarga deshabilitada durante la sesión');
             setTimeout(actualizarEstadoUI, 2500);
         }
     }
-
-    // 🆕 Si el navegador detecta que la página fue RECARGADA (no abierta
-    // normalmente), se registra el evento con GPS, fecha y hora y se
-    // sube a la hoja de cálculo: cada intento de evasión queda delatado.
-    function registrarRecargaSiAplica() {
-        try {
-            const nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
-            if (nav && nav.type === 'reload' && bloqueoActivo) {
-                encolarFila([ultimaLat || '0', ultimaLon || '0', getFechaActual(), getHoraActual(), 'RECARGA DE APP']);
-            }
-        } catch (e) { /* navegadores antiguos sin Navigation Timing 2 */ }
-    }
-
     function activarBloqueo() {
-        const inicioGuardado = parseInt(localStorage.getItem(KEY_LOCK) || '0', 10);
-        // Si no hay bloqueo previo, o el anterior ya venció,
-        // cada apertura de la app inicia un bloqueo nuevo de 1.5 h.
-        if (!inicioGuardado || (inicioGuardado + LOCK_DURACION) <= Date.now()) {
-            localStorage.setItem(KEY_LOCK, Date.now().toString());
-        }
-        // 🆕 El cronómetro "Tiempo de rastreo" se ancla al inicio real de la
-        // sesión: aunque el usuario recargue la página, NO se reinicia.
+        const ini = parseInt(localStorage.getItem(KEY_LOCK) || '0', 10);
+        if (!ini || (ini + LOCK_DURACION) <= Date.now()) localStorage.setItem(KEY_LOCK, Date.now().toString());
         appStartTime = parseInt(localStorage.getItem(KEY_LOCK), 10);
-
         bloqueoActivo = true;
         window.addEventListener('beforeunload', manejarBeforeUnload);
-        window.addEventListener('keydown', bloquearTeclasRecarga, true);   // 🆕 F5 / Ctrl+R bloqueados
-        history.pushState({ bloqueo: true }, '', location.href);
+        window.addEventListener('keydown', bloquearTeclasRecarga, true);
+        history.pushState({ b: 1 }, '', location.href);
         window.addEventListener('popstate', manejarPopState);
         actualizarUIBloqueo();
     }
-
     function desactivarBloqueo() {
         bloqueoActivo = false;
         window.removeEventListener('beforeunload', manejarBeforeUnload);
         window.removeEventListener('keydown', bloquearTeclasRecarga, true);
         window.removeEventListener('popstate', manejarPopState);
         localStorage.removeItem(KEY_LOCK);
-        appStartTime = Date.now() - (LOCK_DURACION);   // el cronómetro sigue corriendo desde las 1.5 h
-        const row = document.getElementById('lockRow');
-        row.classList.add('desbloqueado');
-        document.getElementById('lockLabel').innerText = '🔓 Sesión desbloqueada';
-        document.getElementById('lockRestante').innerText = '00:00:00';
+        $('lockRow').classList.add('desbloqueado');
+        $('lockLabel').innerText = '🔓 Sesión desbloqueada';
+        $('lockRestante').innerText = '00:00:00';
     }
-
     function actualizarUIBloqueo() {
         if (!bloqueoActivo) return;
-        const restante = tiempoRestanteBloqueo();
-        if (restante <= 0) { desactivarBloqueo(); return; }
-        const seg = Math.floor(restante / 1000);
-        const h = pad(Math.floor(seg / 3600)), m = pad(Math.floor((seg % 3600) / 60)), s = pad(seg % 60);
-        document.getElementById('lockRestante').innerText = `${h}:${m}:${s}`;
+        const r = tiempoRestanteBloqueo();
+        if (r <= 0) { desactivarBloqueo(); return; }
+        const s = Math.floor(r / 1000);
+        $('lockRestante').innerText = `${pad(Math.floor(s/3600))}:${pad(Math.floor((s%3600)/60))}:${pad(s%60)}`;
     }
-
-    // --- COLA Y TRACKING ---
-    const obtenerCola = () => JSON.parse(localStorage.getItem(KEY_COLA) || '[]');
-    const guardarCola = (c) => localStorage.setItem(KEY_COLA, JSON.stringify(c));
-
-    function encolarFila(fila) {
-        const cola = obtenerCola();
-        cola.push(fila);
-        guardarCola(cola);
-        agregarEntradaLista(fila, 'pendiente');
-        actualizarResumen();
-    }
-
-    async function enviarLote(filas) {
+    function registrarRecargaSiAplica() {
         try {
-            const resp = await fetch(SCRIPT_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ tipo: 'TRACKING_DELTA', filas: filas })
-            });
-            if (!resp.ok) return false;
-            const r = await resp.json();
-            return r && r.ok === true;
-        } catch (e) { return false; }
+            const nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+            if (nav && nav.type === 'reload') registrarPunto('RECARGA DE APP');
+        } catch (e) { }
     }
 
-    async function sincronizar() {
-        if (sincronizando || !navigator.onLine) return;
-        const colaInicial = obtenerCola();
-        if (colaInicial.length === 0) {
-            actualizarEstadoUI();
-            sincronizarNovedades();   // 🆕 aunque no haya GPS pendiente, revisar novedades
-            return;
-        }
-
-        sincronizando = true;
-        mostrarEstado('syncing', `🔄 Sincronizando (${colaInicial.length})...`);
-
-        try {
-            while (true) {
-                const cola = obtenerCola();
-                if (cola.length === 0) break;
-                const lote = cola.slice(0, LOTE_MAXIMO);
-                const ok = await enviarLote(lote);
-                if (!ok) { mostrarEstado('offline', `⚠️ Error al subir (${obtenerCola().length})`); return; }
-                const colaActual = obtenerCola();
-                guardarCola(colaActual.slice(lote.length));
-                agregarAlHistorial(lote);
-                marcarEnviadasUI(lote.length);
-                actualizarResumen();
-            }
-            mostrarEstado('online', '🟢 Conexión con servidor: OK');
-        } finally {
-            sincronizando = false;
-            actualizarResumen();
-        }
-
-        sincronizarNovedades();   // 🆕 después del GPS, subir las novedades pendientes
-    }
-
-    function agregarAlHistorial(filas) {
-        let hist = JSON.parse(localStorage.getItem(KEY_HISTORIAL) || '[]');
-        hist.push(...filas);
-        if (hist.length > MAX_HISTORIAL) hist = hist.slice(-MAX_HISTORIAL);
-        localStorage.setItem(KEY_HISTORIAL, JSON.stringify(hist));
-        totalRegistrados = hist.length + obtenerCola().length;
-    }
-
-    // --- GPS Y WAKE LOCK ---
-    let wakeLock = null;
-    async function solicitarWakeLock() { try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (e) { } }
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { solicitarWakeLock(); sincronizar(); } });
-
-    function gestionarGPSPersistente() {
-        if (!navigator.geolocation) return;
-        navigator.geolocation.watchPosition(
-            (pos) => {
-                ultimaLat = pos.coords.latitude.toFixed(6);
-                ultimaLon = pos.coords.longitude.toFixed(6);
-                const label = document.getElementById('gpsLabel');
-                label.innerText = '📍 GPS: Señal fijada';
-                label.classList.remove('buscando');
-                document.getElementById('gpsCoords').innerText = `${ultimaLat}, ${ultimaLon}`;
-            },
-            () => {
-                const label = document.getElementById('gpsLabel');
-                label.innerText = '⚠️ Buscando satélites...';
-                label.classList.add('buscando');
-            },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        );
-    }
-
-    function iniciarRastreador() {
-        setInterval(() => {
-            if (!ultimaLat || !ultimaLon) return;
-            totalRegistrados++;
-            encolarFila([ultimaLat, ultimaLon, getFechaActual(), getHoraActual()]);
-            sincronizar(); 
-        }, INTERVALO_GPS);
-    }
-
-    // --- FECHA Y HORA ---
-    const pad = n => n.toString().padStart(2, '0');
-    const sinApostrofe = v => String(v).replace(/^'/, '');
-
-    function getFechaActual() { const d = new Date(); return `'${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`; }
-    function getHoraActual() { const d = new Date(); return `'${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; }
-
-    function actualizarReloj() {
-        const d = new Date();
-        document.getElementById('txtHora').innerText  = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-        document.getElementById('txtFecha').innerText = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
-    }
-
-    function actualizarCronometro() {
-        const seg = Math.floor((Date.now() - appStartTime) / 1000);
-        const h = pad(Math.floor(seg / 3600)), m = pad(Math.floor((seg % 3600) / 60)), s = pad(seg % 60);
-        document.getElementById('cronometro').innerText = `${h}:${m}:${s}`;
-    }
-
-    function actualizarResumen() {
-        const pendientes = obtenerCola().length;
-        let texto = `${totalRegistrados} registrados · ${pendientes} pendientes`;
-        if (novedadesPendientesCount > 0) texto += ` · 📷 ${novedadesPendientesCount} novedad(es) por subir`;
-        document.getElementById('resumenRegistros').innerText = texto;
-        document.getElementById('listaContador').innerText = `${totalRegistrados} puntos`;
-        if (!sincronizando && !sincronizandoNovedades) actualizarEstadoUI();
-    }
-
-    // --- UI Y ESTADOS ---
-    const MAX_LISTA = 100; let entradasPendientesUI = [];
-    function agregarEntradaLista(fila, estado) {
-        const body = document.getElementById('listaBody');
-        const vacio = document.getElementById('listaVacia'); if (vacio) vacio.remove();
-
-        const div = document.createElement('div'); div.className = 'coord-item';
-        const hora = document.createElement('span'); hora.className = 'coord-hora'; hora.textContent = sinApostrofe(fila[3]);
-        const valor = document.createElement('span'); valor.className = 'coord-valor';
-        valor.textContent = fila[4] ? `⚠️ ${fila[4]}` : `${fila[0]}, ${fila[1]}`;
-        if (fila[4]) valor.style.color = 'var(--rojo)';
-        const est = document.createElement('span'); est.className = `coord-estado ${estado}`; est.textContent = estado === 'enviado' ? '✓ Enviado' : '⏳ Pendiente';
-
-        div.append(hora, valor, est); body.prepend(div);   
-        if (estado === 'pendiente') entradasPendientesUI.push(div);
-        while (body.children.length > MAX_LISTA) { body.removeChild(body.lastChild); }
-    }
-
-    function marcarEnviadasUI(cantidad) {
-        for (let i = 0; i < cantidad; i++) {
-            const div = entradasPendientesUI.shift();
-            if (!div) break;
-            const est = div.querySelector('.coord-estado');
-            if (est) { est.className = 'coord-estado enviado'; est.textContent = '✓ Enviado'; }
-        }
-    }
-
-    function restaurarLista(historial) {
-        historial.slice(-MAX_LISTA).forEach(f => agregarEntradaLista(f, 'enviado'));
-        entradasPendientesUI = [];
-        obtenerCola().forEach(f => agregarEntradaLista(f, 'pendiente'));
-    }
-
-    function mostrarEstado(tipo, texto) {
-        const div = document.getElementById('serverStatus');
-        div.innerText = texto; div.className = `server-status-bar server-${tipo}`;
-    }
-
-    function actualizarEstadoUI() {
-        const p = obtenerCola().length;
-        const n = novedadesPendientesCount;
-        if (!navigator.onLine) {
-            let texto = `⚠️ Modo offline (${p} GPS`;
-            if (n > 0) texto += ` · ${n} novedades`;
-            texto += ` pendientes)`;
-            mostrarEstado('offline', texto);
-        }
-        else if (p > 0 || n > 0) mostrarEstado('syncing', `🔄 Sincronizando (${p + n} pendientes)...`);
-        else mostrarEstado('online', '🟢 Conexión con servidor: OK');
-    }
-
-    // --- INICIO ---
-    window.addEventListener('online', () => { sincronizar(); });
-    window.addEventListener('offline', () => { actualizarEstadoUI(); actualizarAvisoOffline(); });
-    window.addEventListener('online',  () => { actualizarAvisoOffline(); });
-
-    async function iniciarSistema() {
-        activarBloqueo();                     // 🆕 bloqueo de sesión de 1.5 horas
-        solicitarWakeLock();
-        gestionarGPSPersistente();
-        const hist = JSON.parse(localStorage.getItem(KEY_HISTORIAL) || '[]');
-        totalRegistrados = hist.length + obtenerCola().length;
-        restaurarLista(hist);
-        registrarRecargaSiAplica();           // 🆕 delata recargas de página en la hoja de cálculo
-        await refrescarContadorNovedades();   // 🆕 leer novedades guardadas de sesiones anteriores
-        if (navigator.onLine) await sincronizar(); else actualizarEstadoUI();
-        iniciarRastreador();
-        setInterval(sincronizar, INTERVALO_SYNC);  
-        setInterval(actualizarCronometro, 1000);
-        setInterval(actualizarReloj, 1000);
-        setInterval(actualizarUIBloqueo, 1000);   // 🆕 cuenta regresiva del bloqueo
-        actualizarReloj(); actualizarResumen();
-    }
-
-
-    // ============================================================
-    // LÓGICA DE NOVEDADES Y CÁMARA WEBRTC
-    // ============================================================
-    
-    function actualizarAvisoOffline() {
-        document.getElementById('avisoOffline').classList.toggle('visible', !navigator.onLine);
-    }
-
-    function abrirNovedad() {
+    // --- NOVEDADES Y CÁMARA (solo RONDA) ---
+    function actualizarAvisoOffline() { $('avisoOffline').classList.toggle('visible', !navigator.onLine); }
+    $('btnReportar').addEventListener('click', () => {
         actualizarAvisoOffline();
-        document.getElementById('vistaTracker').classList.add('pantalla-oculta');
-        document.getElementById('vistaNovedad').classList.remove('pantalla-oculta');
-    }
+        $('vistaTracker').classList.add('pantalla-oculta');
+        $('vistaNovedad').classList.remove('pantalla-oculta');
+    });
+    $('btnVolver').addEventListener('click', () => {
+        $('vistaNovedad').classList.add('pantalla-oculta');
+        $('vistaTracker').classList.remove('pantalla-oculta');
+    });
 
-    function cerrarNovedad() {
-        document.getElementById('vistaNovedad').classList.add('pantalla-oculta');
-        document.getElementById('vistaTracker').classList.remove('pantalla-oculta');
-    }
-
-    const startCameraBtn = document.getElementById('startCameraBtn');
-    const uploadLabel = document.getElementById('uploadLabel');
-    const photoCheckmark = document.getElementById('photoCheckmark');
-    
-    const cameraOverlay = document.getElementById('cameraOverlay');
-    const liveVideo = document.getElementById('liveVideo');
-    const photoCanvas = document.getElementById('photoCanvas');
-    const captureBtn = document.getElementById('captureBtn');
-    const closeCameraBtn = document.getElementById('closeCameraBtn');
-
-    const imagePlaceholder = document.getElementById('imagePlaceholder');
-    const capturedImageContainer = document.getElementById('capturedImageContainer');
-    const finalPhoto = document.getElementById('finalPhoto');
-    const retryPhotoBtn = document.getElementById('retryPhotoBtn');
-    const txtDetalle = document.getElementById('txtDetalle');
-    const btnSubmitNovedad = document.getElementById('btnSubmitNovedad');
-
-    let capturedPhotoData = null; 
-    let currentStream = null;
+    let capturedPhotoData = null, currentStream = null;
+    const liveVideo = $('liveVideo'), photoCanvas = $('photoCanvas');
 
     function stopCamera() {
-        cameraOverlay.classList.remove('active');
-        if (currentStream) {
-            currentStream.getTracks().forEach(track => track.stop());
-            currentStream = null;
-        }
+        $('cameraOverlay').classList.remove('active');
+        if (currentStream) { currentStream.getTracks().forEach(t => t.stop()); currentStream = null; }
     }
-
-    startCameraBtn.addEventListener('click', async () => {
-        if (capturedPhotoData) return; 
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            alert('El navegador no soporta el acceso a la cámara nativa.');
-            return;
-        }
+    $('startCameraBtn').addEventListener('click', async () => {
+        if (capturedPhotoData) return;
+        if (!navigator.mediaDevices?.getUserMedia) { alert('El navegador no soporta la cámara.'); return; }
         try {
-            // Intenta abrir la cámara trasera
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-            currentStream = stream;
-            liveVideo.srcObject = stream;
-            cameraOverlay.classList.add('active'); 
-        } catch (error) {
-            alert('Permiso denegado o error al acceder a la cámara.');
-        }
+            currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            liveVideo.srcObject = currentStream;
+            $('cameraOverlay').classList.add('active');
+        } catch (e) { alert('Permiso denegado o error al acceder a la cámara.'); }
     });
+    $('closeCameraBtn').addEventListener('click', stopCamera);
 
-    closeCameraBtn.addEventListener('click', stopCamera);
-
-    captureBtn.addEventListener('click', () => {
+    function comprimirFoto() {
+        const MAX_DIM = 1280, LIMITE = 700000;
+        const w = liveVideo.videoWidth, h = liveVideo.videoHeight;
+        const escala = Math.min(1, MAX_DIM / Math.max(w, h));
+        photoCanvas.width = Math.round(w * escala);
+        photoCanvas.height = Math.round(h * escala);
+        photoCanvas.getContext('2d').drawImage(liveVideo, 0, 0, photoCanvas.width, photoCanvas.height);
+        let calidad = 0.7, data = photoCanvas.toDataURL('image/jpeg', calidad);
+        while (data.length > LIMITE && calidad > 0.3) {
+            calidad -= 0.1;
+            data = photoCanvas.toDataURL('image/jpeg', calidad);
+        }
+        return data;
+    }
+    $('captureBtn').addEventListener('click', () => {
         if (!currentStream) return;
-        
-        photoCanvas.width = liveVideo.videoWidth;
-        photoCanvas.height = liveVideo.videoHeight;
-        const context = photoCanvas.getContext('2d');
-        context.drawImage(liveVideo, 0, 0, photoCanvas.width, photoCanvas.height);
-        
-        // Guardar la foto en Base64
-        capturedPhotoData = photoCanvas.toDataURL('image/jpeg', 0.7);
-        finalPhoto.src = capturedPhotoData;
-        
-        // Cambiar UI del formulario
-        imagePlaceholder.style.display = 'none';
-        capturedImageContainer.style.display = 'block';
-        uploadLabel.innerHTML = 'Evidencia Capturada';
-        photoCheckmark.innerHTML = '✔️';
-
+        capturedPhotoData = comprimirFoto();
+        $('finalPhoto').src = capturedPhotoData;
+        $('imagePlaceholder').style.display = 'none';
+        $('capturedImageContainer').style.display = 'block';
+        $('uploadLabel').innerHTML = 'Evidencia Capturada';
+        $('photoCheckmark').innerHTML = '✔️';
         stopCamera();
     });
-
-    retryPhotoBtn.addEventListener('click', () => {
-        capturedPhotoData = null;
-        finalPhoto.src = '';
-        capturedImageContainer.style.display = 'none';
-        imagePlaceholder.style.display = 'flex';
-        uploadLabel.innerHTML = 'Tomar Evidencia';
-        photoCheckmark.innerHTML = '';
-    });
-
     function resetFormularioNovedad() {
         capturedPhotoData = null;
-        finalPhoto.src = '';
-        capturedImageContainer.style.display = 'none';
-        imagePlaceholder.style.display = 'flex';
-        uploadLabel.innerHTML = 'Tomar Evidencia';
-        photoCheckmark.innerHTML = '';
-        txtDetalle.value = '';
+        $('finalPhoto').src = '';
+        $('capturedImageContainer').style.display = 'none';
+        $('imagePlaceholder').style.display = 'flex';
+        $('uploadLabel').innerHTML = 'Tomar Evidencia';
+        $('photoCheckmark').innerHTML = '';
+        $('txtDetalle').value = '';
     }
+    $('retryPhotoBtn').addEventListener('click', resetFormularioNovedad);
 
-    // --- ENVÍO DE LA NOVEDAD (CON SOPORTE OFFLINE) ---
-    async function enviarNovedad() {
-        const detalle = txtDetalle.value.trim();
-
+    $('btnSubmitNovedad').addEventListener('click', () => {
+        const detalle = $('txtDetalle').value.trim();
         if (!capturedPhotoData) { alert('⚠️ Es obligatorio tomar la foto de evidencia.'); return; }
         if (!detalle) { alert('⚠️ Es obligatorio redactar el detalle de la novedad.'); return; }
 
-        btnSubmitNovedad.disabled = true;
+        registrarEnFirestore(collection(db, 'novedades'), {
+            fecha: getFecha(), hora: getHora(),
+            lat: parseFloat(ultimaLat) || 0, lon: parseFloat(ultimaLon) || 0,
+            detalle: detalle, fotoBase64: capturedPhotoData,
+            usuario: sesion.usuario, nombre: sesion.nombre, centro: sesion.centro,
+            ts: serverTimestamp(), tsLocal: Date.now()
+        }, null);
 
-        const payload = {
-            tipo: 'NOVEDAD',
-            fecha: sinApostrofe(getFechaActual()),
-            hora: sinApostrofe(getHoraActual()),
-            lat: ultimaLat || "0",
-            lon: ultimaLon || "0",
-            detalle: detalle,
-            imagenBase64: capturedPhotoData
-        };
+        alert(navigator.onLine
+            ? "✅ Reporte enviado. Se está subiendo al servidor."
+            : "📦 Sin conexión: el reporte quedó GUARDADO en el dispositivo y se subirá automáticamente al recuperar internet.");
+        resetFormularioNovedad();
+        $('vistaNovedad').classList.add('pantalla-oculta');
+        $('vistaTracker').classList.remove('pantalla-oculta');
+    });
 
-        // 🆕 CASO 1: SIN INTERNET → guardar en el dispositivo
-        if (!navigator.onLine) {
-            await guardarOffline(payload);
+    // ============================================================
+    // ███ INTERFAZ SUPERVISOR ███
+    // (un RONDA nunca llega aquí; y aunque manipulara el código,
+    //  las reglas de Firestore le niegan la LECTURA de rutas/novedades)
+    // ============================================================
+    const COLORES = ['#1b6fd6','#d93838','#18a558','#e8a020','#8e44ad','#16a2b8','#d6336c','#5c636a'];
+    let mapa = null, capaRutas = {}, marcadores = {};
+    let rondasInfo = [];                 // [{uid, nombre, usuario, centro, hoja, color, puntos:[]}]
+    let novedadesCache = [];
+    let primerAjuste = true;
+    let suscripciones = [];
+
+    async function entrarSupervisor() {
+        ocultarTodasLasVistas();
+        $('vistaSupervisor').classList.add('activo');
+        $('supNombre').innerText = `👤 ${sesion.nombre}`;
+        if (supervisorIniciado) return;
+        supervisorIniciado = true;
+        registrarAcceso();
+
+        // Mapa con VISTA SATELITAL realista (Esri World Imagery, sin API key)
+        mapa = L.map('mapa').setView([-2.1894, -79.8891], 12);
+
+        const capaSatelite = L.tileLayer(
+            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics'
+        });
+        // Etiquetas de calles y lugares sobre la imagen satelital (modo híbrido)
+        const capaEtiquetas = L.tileLayer(
+            'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19, pane: 'shadowPane'
+        });
+        const capaCalles = L.tileLayer(
+            'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19, attribution: '&copy; OpenStreetMap'
+        });
+
+        const vistaSatelital = L.layerGroup([capaSatelite, capaEtiquetas]);
+        vistaSatelital.addTo(mapa);   // satelital por defecto
+
+        L.control.layers(
+            { '🛰️ Satélite': vistaSatelital, '🗺️ Calles': capaCalles },
+            null, { position: 'topright' }
+        ).addTo(mapa);
+
+        // Carga la lista de rondas desde la colección usuarios
+        try {
+            const qs = await getDocs(query(collection(db, 'usuarios'), where('perfil', '==', 'RONDA')));
+            rondasInfo = qs.docs.map((d, i) => ({
+                uid: d.id, ...d.data(),
+                color: COLORES[i % COLORES.length], puntos: []
+            }));
+        } catch (e) {
+            alert('No se pudo cargar la lista de rondas. Verifique las reglas de Firestore.');
             return;
         }
 
-        // CASO 2: CON INTERNET → intentar envío directo
-        btnSubmitNovedad.innerText = "Subiendo archivo...";
-        const ok = await enviarNovedadServidor(payload);
+        // 🔴 TIEMPO REAL: una suscripción por ronda. En cuanto el teléfono
+        // sube un punto, el mapa se actualiza solo (sin refrescar nada).
+        rondasInfo.forEach(ronda => {
+            if (!ronda.hoja) return;
+            const q = query(collection(db, 'rondas', ronda.hoja, 'puntos'), orderBy('ts', 'desc'), limit(300));
+            const unsub = onSnapshot(q, snap => {
+                ronda.puntos = snap.docs.map(d => d.data()).reverse();   // cronológico
+                renderMapa();
+            }, () => {});
+            suscripciones.push(unsub);
+        });
 
-        if (ok) {
-            alert("✅ Reporte de novedad enviado con éxito.");
-            resetFormularioNovedad();
-            cerrarNovedad();
-            btnSubmitNovedad.disabled = false;
-            btnSubmitNovedad.innerText = "Enviar Reporte";
-        } else {
-            // 🆕 CASO 3: el envío falló (conexión inestable se cayó a mitad
-            // de la subida) → no se pierde nada, se guarda local
-            await guardarOffline(payload);
+        // 🔴 TIEMPO REAL: novedades
+        const qNov = query(collection(db, 'novedades'), orderBy('ts', 'desc'), limit(60));
+        suscripciones.push(onSnapshot(qNov, snap => {
+            novedadesCache = snap.docs.map(d => d.data());
+            renderNovedades();
+        }, () => {}));
+
+        $('filtroCentro').addEventListener('change', () => { renderMapa(); renderNovedades(); });
+        poblarFiltroCentros();
+    }
+
+    function poblarFiltroCentros() {
+        const sel = $('filtroCentro');
+        const centros = [...new Set(rondasInfo.map(r => r.centro).filter(Boolean))].sort();
+        sel.innerHTML = '<option value="">Todos</option>' + centros.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+
+    function puntoValido(p) { return p && (p.lat !== 0 || p.lon !== 0) && !isNaN(p.lat) && !isNaN(p.lon); }
+
+    function renderMapa() {
+        if (!mapa) return;
+        const filtro = $('filtroCentro').value;
+        const visibles = rondasInfo.filter(r => !filtro || r.centro === filtro);
+        const leyenda = $('leyenda');
+        leyenda.innerHTML = '';
+        const bounds = [];
+        let activas = 0;
+
+        // Limpia capas de rondas ocultas por el filtro
+        Object.keys(capaRutas).forEach(hoja => {
+            if (!visibles.find(r => r.hoja === hoja)) {
+                if (capaRutas[hoja]) mapa.removeLayer(capaRutas[hoja]);
+                if (marcadores[hoja]) mapa.removeLayer(marcadores[hoja]);
+                delete capaRutas[hoja]; delete marcadores[hoja];
+            }
+        });
+
+        visibles.forEach(ronda => {
+            const coords = ronda.puntos.filter(puntoValido).map(p => [p.lat, p.lon]);
+
+            const item = document.createElement('div');
+            item.className = 'leyenda-item';
+            item.innerHTML = `<span class="leyenda-color" style="background:${ronda.color}"></span>${ronda.nombre} (${ronda.hoja}) · ${coords.length} pts`;
+            leyenda.appendChild(item);
+
+            if (capaRutas[ronda.hoja]) mapa.removeLayer(capaRutas[ronda.hoja]);
+            if (marcadores[ronda.hoja]) mapa.removeLayer(marcadores[ronda.hoja]);
+            if (coords.length === 0) return;
+            activas++;
+
+            // Doble trazo: borde blanco + línea de color, para que la ruta
+            // resalte sobre la imagen satelital (terrenos oscuros, vegetación)
+            capaRutas[ronda.hoja] = L.layerGroup([
+                L.polyline(coords, { color: '#ffffff', weight: 7, opacity: .9 }),
+                L.polyline(coords, { color: ronda.color, weight: 4, opacity: 1 })
+            ]).addTo(mapa);
+
+            const ult = ronda.puntos.filter(puntoValido).slice(-1)[0];
+            marcadores[ronda.hoja] = L.circleMarker(coords[coords.length - 1], {
+                radius: 9, color: '#fff', weight: 2, fillColor: ronda.color, fillOpacity: 1
+            }).addTo(mapa).bindPopup(`<b>${ronda.nombre}</b><br>${ronda.centro}<br>Último punto: ${ult.hora || ''} ${ult.fecha || ''}<br>${ult.lat}, ${ult.lon}`);
+
+            coords.forEach(c => bounds.push(c));
+        });
+
+        $('contadorRutas').innerText = `${activas} de ${visibles.length} rondas activas`;
+        if (bounds.length > 0 && primerAjuste) {
+            mapa.fitBounds(bounds, { padding: [30, 30] });
+            primerAjuste = false;
         }
     }
 
-    // Guarda la novedad en IndexedDB y deja la app lista para
-    // sincronizarla automáticamente cuando vuelva el internet.
-    async function guardarOffline(payload) {
-        btnSubmitNovedad.innerText = "Guardando en dispositivo...";
-        try {
-            await guardarNovedadLocal(payload);
-            await refrescarContadorNovedades();
-            alert("📦 Sin conexión estable: el reporte (foto + detalle) quedó GUARDADO en el dispositivo.\n\nSe enviará automáticamente cuando se recupere el internet. No cierre la aplicación con el navegador en modo incógnito.");
-            resetFormularioNovedad();
-            cerrarNovedad();
-        } catch (e) {
-            alert("❌ No se pudo guardar el reporte en el dispositivo. Verifique el espacio de almacenamiento e intente de nuevo.");
-        } finally {
-            btnSubmitNovedad.disabled = false;
-            btnSubmitNovedad.innerText = "Enviar Reporte";
-        }
+    function renderNovedades() {
+        const filtro = $('filtroCentro').value;
+        const lista = novedadesCache.filter(n => !filtro || n.centro === filtro);
+        $('contadorNov').innerText = lista.length;
+
+        const body = $('novedadesBody');
+        if (lista.length === 0) { body.innerHTML = '<div class="nov-vacia">Sin novedades por mostrar</div>'; return; }
+
+        body.innerHTML = '';
+        lista.forEach(n => {
+            const div = document.createElement('div');
+            div.className = 'nov-item';
+            const tieneGPS = n.lat && n.lon;
+            div.innerHTML = `
+                <div class="nov-head">
+                    <span class="nov-usuario">👤 ${n.nombre || n.usuario || 'Sin usuario'}</span>
+                    ${n.centro ? `<span class="nov-centro">${n.centro}</span>` : ''}
+                </div>
+                <div class="nov-fecha">🕐 ${n.fecha || ''} · ${n.hora || ''}</div>
+                <div class="nov-detalle">${String(n.detalle || '').replace(/</g, '&lt;')}</div>
+                ${n.fotoBase64 ? `<img class="nov-foto" loading="lazy" src="${n.fotoBase64}" alt="Evidencia">` : ''}
+                ${tieneGPS ? `<div class="nov-gps">📍 ${n.lat}, ${n.lon} · <a href="https://www.google.com/maps?q=${n.lat},${n.lon}" target="_blank" rel="noopener">Ver en Google Maps</a></div>` : ''}`;
+            body.appendChild(div);
+        });
     }
+
+    // El SUPERVISOR sí puede cerrar sesión (no tiene bloqueo de 1.5 h)
+    $('btnSalirSup').addEventListener('click', async () => {
+        suscripciones.forEach(u => { try { u(); } catch (e) { } });
+        localStorage.removeItem(KEY_PERFIL);
+        await signOut(auth);
+        location.reload();
+    });
     </script>
 </body>
 </html>
