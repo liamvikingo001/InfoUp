@@ -89,8 +89,18 @@
             background-color: #2b5c9c; color: white; border: none; border-radius: 10px; padding: 16px;
             font-size: 18px; font-weight: bold; width: 100%; cursor: pointer; flex-shrink: 0;
             box-shadow: 0 4px 10px rgba(13, 58, 117, 0.2); transition: background-color 0.2s;
+            position: relative;
         }
         .btn-reportar:active { background-color: var(--navy-oscuro); }
+
+        /* Badge de novedades pendientes en el botón Reportar */
+        .badge-pendientes {
+            display: none; position: absolute; top: -8px; right: -4px;
+            background: var(--naranja); color: #fff; font-size: 12px; font-weight: 900;
+            min-width: 24px; height: 24px; line-height: 24px; border-radius: 999px;
+            padding: 0 7px; box-shadow: 0 2px 6px rgba(0,0,0,.25);
+        }
+        .badge-pendientes.visible { display: inline-block; }
 
         /* --- VISTA DE NOVEDADES Y CÁMARA --- */
         .pantalla-oculta { display: none !important; }
@@ -117,6 +127,14 @@
         .submit-btn { width: 100%; padding: 16px; background-color: var(--verde); color: white; border: none; border-radius: 10px; font-size: 17px; font-weight: bold; cursor: pointer; transition: filter 0.2s; }
         .submit-btn:disabled { background-color: var(--gris-texto); }
         .submit-btn:active { filter: brightness(0.9); }
+
+        /* Aviso de modo offline dentro del formulario de novedad */
+        .aviso-offline {
+            display: none; background: var(--rojo-suave); color: var(--rojo); border: 1px solid #f3c9c9;
+            border-radius: 10px; padding: 10px 14px; font-size: 13px; font-weight: 700; text-align: center;
+            margin-top: 12px;
+        }
+        .aviso-offline.visible { display: block; }
 
         /* OVERLAY CÁMARA OSCURA */
         #cameraOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #000000; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
@@ -167,7 +185,10 @@
             </div>
         </div>
 
-        <button class="btn-reportar" onclick="abrirNovedad()">Reportar Novedad</button>
+        <button class="btn-reportar" onclick="abrirNovedad()">
+            Reportar Novedad
+            <span class="badge-pendientes" id="badgeNovedades">0</span>
+        </button>
     </div>
 
     <div class="container pantalla-oculta" id="vistaNovedad">
@@ -179,6 +200,10 @@
         </div>
 
         <div class="lista-card" style="padding: 15px; border: none; overflow-y: auto; background: transparent;">
+
+            <div id="avisoOffline" class="aviso-offline">
+                📡 Sin conexión: el reporte se guardará en el dispositivo y se enviará automáticamente al recuperar internet.
+            </div>
             
             <button type="button" class="daily-row" id="startCameraBtn">
                 <span class="camera-icon">📸</span>
@@ -230,6 +255,129 @@
     let totalRegistrados = 0;
     let sincronizando = false;
 
+    // ============================================================
+    // 🆕 INDEXEDDB: ALMACENAMIENTO LOCAL DE NOVEDADES (FOTO + TEXTO)
+    // Se usa IndexedDB porque las fotos en Base64 superan
+    // fácilmente el límite (~5MB) de localStorage.
+    // ============================================================
+    const DB_NAME         = 'airControlDB';
+    const DB_VERSION      = 1;
+    const STORE_NOVEDADES = 'novedadesPendientes';
+
+    let dbInstancia = null;
+    let novedadesPendientesCount = 0;   // caché del contador para la UI
+    let sincronizandoNovedades = false;
+
+    function abrirDB() {
+        return new Promise((resolve, reject) => {
+            if (dbInstancia) { resolve(dbInstancia); return; }
+            const req = indexedDB.open(DB_NAME, DB_VERSION);
+            req.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(STORE_NOVEDADES)) {
+                    db.createObjectStore(STORE_NOVEDADES, { keyPath: 'id', autoIncrement: true });
+                }
+            };
+            req.onsuccess = () => { dbInstancia = req.result; resolve(dbInstancia); };
+            req.onerror   = () => reject(req.error);
+        });
+    }
+
+    function guardarNovedadLocal(payload) {
+        return abrirDB().then(db => new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NOVEDADES, 'readwrite');
+            tx.objectStore(STORE_NOVEDADES).add({ payload: payload, creadoEn: Date.now() });
+            tx.oncomplete = () => resolve(true);
+            tx.onerror    = () => reject(tx.error);
+        }));
+    }
+
+    function obtenerNovedadesPendientes() {
+        return abrirDB().then(db => new Promise((resolve, reject) => {
+            const tx  = db.transaction(STORE_NOVEDADES, 'readonly');
+            const req = tx.objectStore(STORE_NOVEDADES).getAll();
+            req.onsuccess = () => resolve(req.result || []);
+            req.onerror   = () => reject(req.error);
+        }));
+    }
+
+    function eliminarNovedadLocal(id) {
+        return abrirDB().then(db => new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NOVEDADES, 'readwrite');
+            tx.objectStore(STORE_NOVEDADES).delete(id);
+            tx.oncomplete = () => resolve(true);
+            tx.onerror    = () => reject(tx.error);
+        }));
+    }
+
+    function contarNovedadesPendientes() {
+        return abrirDB().then(db => new Promise((resolve, reject) => {
+            const tx  = db.transaction(STORE_NOVEDADES, 'readonly');
+            const req = tx.objectStore(STORE_NOVEDADES).count();
+            req.onsuccess = () => resolve(req.count !== undefined ? req.count : req.result);
+            req.onerror   = () => reject(req.error);
+        }));
+    }
+
+    async function refrescarContadorNovedades() {
+        try {
+            novedadesPendientesCount = await contarNovedadesPendientes();
+        } catch (e) {
+            novedadesPendientesCount = 0;
+        }
+        const badge = document.getElementById('badgeNovedades');
+        badge.innerText = novedadesPendientesCount;
+        badge.classList.toggle('visible', novedadesPendientesCount > 0);
+        actualizarResumen();
+    }
+
+    // Envío individual de una novedad al servidor. Devuelve true solo si el
+    // servidor confirmó la recepción (ok: true).
+    async function enviarNovedadServidor(payload) {
+        try {
+            const resp = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            });
+            if (!resp.ok) return false;
+            const result = await resp.json();
+            return result && result.ok === true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // Sube una por una las novedades guardadas en el dispositivo.
+    // Cada novedad se borra de IndexedDB ÚNICAMENTE cuando el servidor
+    // confirma — si la conexión se cae a mitad de la subida, lo que
+    // falta queda intacto para el próximo intento.
+    async function sincronizarNovedades() {
+        if (sincronizandoNovedades || !navigator.onLine) return;
+
+        let pendientes;
+        try { pendientes = await obtenerNovedadesPendientes(); }
+        catch (e) { return; }
+        if (pendientes.length === 0) return;
+
+        sincronizandoNovedades = true;
+        try {
+            for (let i = 0; i < pendientes.length; i++) {
+                mostrarEstado('syncing', `🔄 Subiendo novedades (${pendientes.length - i} restantes)...`);
+                const ok = await enviarNovedadServidor(pendientes[i].payload);
+                if (!ok) {
+                    mostrarEstado('offline', `⚠️ Error al subir novedades`);
+                    return;
+                }
+                await eliminarNovedadLocal(pendientes[i].id);
+                await refrescarContadorNovedades();
+            }
+            actualizarEstadoUI();
+        } finally {
+            sincronizandoNovedades = false;
+        }
+    }
+
     // --- COLA Y TRACKING ---
     const obtenerCola = () => JSON.parse(localStorage.getItem(KEY_COLA) || '[]');
     const guardarCola = (c) => localStorage.setItem(KEY_COLA, JSON.stringify(c));
@@ -258,7 +406,11 @@
     async function sincronizar() {
         if (sincronizando || !navigator.onLine) return;
         const colaInicial = obtenerCola();
-        if (colaInicial.length === 0) { actualizarEstadoUI(); return; }
+        if (colaInicial.length === 0) {
+            actualizarEstadoUI();
+            sincronizarNovedades();   // 🆕 aunque no haya GPS pendiente, revisar novedades
+            return;
+        }
 
         sincronizando = true;
         mostrarEstado('syncing', `🔄 Sincronizando (${colaInicial.length})...`);
@@ -281,6 +433,8 @@
             sincronizando = false;
             actualizarResumen();
         }
+
+        sincronizarNovedades();   // 🆕 después del GPS, subir las novedades pendientes
     }
 
     function agregarAlHistorial(filas) {
@@ -346,9 +500,11 @@
 
     function actualizarResumen() {
         const pendientes = obtenerCola().length;
-        document.getElementById('resumenRegistros').innerText = `${totalRegistrados} registrados · ${pendientes} pendientes`;
+        let texto = `${totalRegistrados} registrados · ${pendientes} pendientes`;
+        if (novedadesPendientesCount > 0) texto += ` · 📷 ${novedadesPendientesCount} novedad(es) por subir`;
+        document.getElementById('resumenRegistros').innerText = texto;
         document.getElementById('listaContador').innerText = `${totalRegistrados} puntos`;
-        if (!sincronizando) actualizarEstadoUI();
+        if (!sincronizando && !sincronizandoNovedades) actualizarEstadoUI();
     }
 
     // --- UI Y ESTADOS ---
@@ -389,14 +545,21 @@
 
     function actualizarEstadoUI() {
         const p = obtenerCola().length;
-        if (!navigator.onLine) mostrarEstado('offline', `⚠️ Modo offline (${p} pendientes)`);
-        else if (p > 0) mostrarEstado('syncing', `🔄 Sincronizando (${p} pendientes)...`);
+        const n = novedadesPendientesCount;
+        if (!navigator.onLine) {
+            let texto = `⚠️ Modo offline (${p} GPS`;
+            if (n > 0) texto += ` · ${n} novedades`;
+            texto += ` pendientes)`;
+            mostrarEstado('offline', texto);
+        }
+        else if (p > 0 || n > 0) mostrarEstado('syncing', `🔄 Sincronizando (${p + n} pendientes)...`);
         else mostrarEstado('online', '🟢 Conexión con servidor: OK');
     }
 
     // --- INICIO ---
     window.addEventListener('online', () => { sincronizar(); });
-    window.addEventListener('offline', () => { mostrarEstado('offline', `⚠️ Modo offline (${obtenerCola().length} pendientes)`); });
+    window.addEventListener('offline', () => { actualizarEstadoUI(); actualizarAvisoOffline(); });
+    window.addEventListener('online',  () => { actualizarAvisoOffline(); });
 
     async function iniciarSistema() {
         solicitarWakeLock();
@@ -404,6 +567,7 @@
         const hist = JSON.parse(localStorage.getItem(KEY_HISTORIAL) || '[]');
         totalRegistrados = hist.length + obtenerCola().length;
         restaurarLista(hist);
+        await refrescarContadorNovedades();   // 🆕 leer novedades guardadas de sesiones anteriores
         if (navigator.onLine) await sincronizar(); else actualizarEstadoUI();
         iniciarRastreador();
         setInterval(sincronizar, INTERVALO_SYNC);  
@@ -417,7 +581,12 @@
     // LÓGICA DE NOVEDADES Y CÁMARA WEBRTC
     // ============================================================
     
+    function actualizarAvisoOffline() {
+        document.getElementById('avisoOffline').classList.toggle('visible', !navigator.onLine);
+    }
+
     function abrirNovedad() {
+        actualizarAvisoOffline();
         document.getElementById('vistaTracker').classList.add('pantalla-oculta');
         document.getElementById('vistaNovedad').classList.remove('pantalla-oculta');
     }
@@ -504,16 +673,24 @@
         photoCheckmark.innerHTML = '';
     });
 
-    // --- ENVÍO DE LA NOVEDAD ---
+    function resetFormularioNovedad() {
+        capturedPhotoData = null;
+        finalPhoto.src = '';
+        capturedImageContainer.style.display = 'none';
+        imagePlaceholder.style.display = 'flex';
+        uploadLabel.innerHTML = 'Tomar Evidencia';
+        photoCheckmark.innerHTML = '';
+        txtDetalle.value = '';
+    }
+
+    // --- ENVÍO DE LA NOVEDAD (CON SOPORTE OFFLINE) ---
     async function enviarNovedad() {
         const detalle = txtDetalle.value.trim();
 
         if (!capturedPhotoData) { alert('⚠️ Es obligatorio tomar la foto de evidencia.'); return; }
         if (!detalle) { alert('⚠️ Es obligatorio redactar el detalle de la novedad.'); return; }
-        if (!navigator.onLine) { alert('⚠️ Requiere conexión a internet para subir fotos.'); return; }
 
         btnSubmitNovedad.disabled = true;
-        btnSubmitNovedad.innerText = "Subiendo archivo...";
 
         const payload = {
             tipo: 'NOVEDAD',
@@ -525,31 +702,41 @@
             imagenBase64: capturedPhotoData
         };
 
+        // 🆕 CASO 1: SIN INTERNET → guardar en el dispositivo
+        if (!navigator.onLine) {
+            await guardarOffline(payload);
+            return;
+        }
+
+        // CASO 2: CON INTERNET → intentar envío directo
+        btnSubmitNovedad.innerText = "Subiendo archivo...";
+        const ok = await enviarNovedadServidor(payload);
+
+        if (ok) {
+            alert("✅ Reporte de novedad enviado con éxito.");
+            resetFormularioNovedad();
+            cerrarNovedad();
+            btnSubmitNovedad.disabled = false;
+            btnSubmitNovedad.innerText = "Enviar Reporte";
+        } else {
+            // 🆕 CASO 3: el envío falló (conexión inestable se cayó a mitad
+            // de la subida) → no se pierde nada, se guarda local
+            await guardarOffline(payload);
+        }
+    }
+
+    // Guarda la novedad en IndexedDB y deja la app lista para
+    // sincronizarla automáticamente cuando vuelva el internet.
+    async function guardarOffline(payload) {
+        btnSubmitNovedad.innerText = "Guardando en dispositivo...";
         try {
-            const resp = await fetch(SCRIPT_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(payload)
-            });
-
-            const result = await resp.json();
-
-            if (result.ok) {
-                alert("✅ Reporte de novedad enviado con éxito.");
-                // Resetear Formulario
-                capturedPhotoData = null;
-                finalPhoto.src = '';
-                capturedImageContainer.style.display = 'none';
-                imagePlaceholder.style.display = 'flex';
-                uploadLabel.innerHTML = 'Tomar Evidencia';
-                photoCheckmark.innerHTML = '';
-                txtDetalle.value = '';
-                cerrarNovedad();
-            } else {
-                alert("❌ Error del servidor al guardar la novedad.");
-            }
-        } catch (error) {
-            alert("❌ Error de conexión al intentar enviar el reporte.");
+            await guardarNovedadLocal(payload);
+            await refrescarContadorNovedades();
+            alert("📦 Sin conexión estable: el reporte (foto + detalle) quedó GUARDADO en el dispositivo.\n\nSe enviará automáticamente cuando se recupere el internet. No cierre la aplicación con el navegador en modo incógnito.");
+            resetFormularioNovedad();
+            cerrarNovedad();
+        } catch (e) {
+            alert("❌ No se pudo guardar el reporte en el dispositivo. Verifique el espacio de almacenamiento e intente de nuevo.");
         } finally {
             btnSubmitNovedad.disabled = false;
             btnSubmitNovedad.innerText = "Enviar Reporte";
