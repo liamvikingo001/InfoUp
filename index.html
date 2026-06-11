@@ -3,634 +3,701 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    
+
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Aireadores">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Rastreador">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#4a76c0">
-    
-    <title>Registro_Aireadores</title>
+    <meta name="theme-color" content="#eef1f6">
+
+    <title>Registro_Tracker</title>
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="apple-touch-icon" href="logo.png">
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="manifest" href="manifest.json">
 
     <style>
-        /* --- ESTRUCTURA CRÍTICA --- */
+        /* ============================================================
+           PALETA (tomada de la imagen de referencia)
+           ============================================================ */
+        :root {
+            --fondo:        #eef1f6;   /* gris azulado claro de fondo   */
+            --tarjeta:      #ffffff;   /* tarjetas blancas              */
+            --borde:        #dbe3ee;   /* borde sutil de tarjetas       */
+            --navy:         #134a8e;   /* azul principal (texto/botón)  */
+            --navy-oscuro:  #0d3a75;   /* azul de énfasis               */
+            --naranja:      #e8a020;   /* insignia superior             */
+            --verde:        #18a558;   /* estado OK                     */
+            --verde-suave:  #e6f4ec;   /* fondo del pill verde          */
+            --rojo:         #d93838;   /* estado offline                */
+            --rojo-suave:   #fdecec;
+            --azul-sync:    #1b6fd6;   /* sincronizando                 */
+            --azul-suave:   #e8f1fd;
+            --gris-texto:   #8a94a6;   /* etiquetas secundarias         */
+            --radio: 14px;
+        }
+
         * { box-sizing: border-box; }
-        
-        html, body { 
-            height: 100%; 
-            margin: 0; 
+
+        html, body {
+            height: 100%;
+            margin: 0;
             padding: 0;
-            overflow: hidden; 
-            background-color: #4a76c0; 
-            font-family: Arial, sans-serif; 
-            /* NUEVO: Bloquea el "Pull to refresh" y los gestos de retroceso laterales */
-            overscroll-behavior-y: none;
-            overscroll-behavior-x: none;
+            overflow: hidden;
+            background-color: var(--fondo);
+            font-family: -apple-system, "Segoe UI", "Trebuchet MS", Arial, sans-serif;
+            overscroll-behavior: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .container { 
-            width: 100%; 
-            max-width: 480px; 
-            height: 100%; 
-            margin: 0 auto; 
-            padding: 10px; 
-            /* padding-bottom extendido por si el teléfono tiene "notch" abajo */
-            padding-bottom: env(safe-area-inset-bottom, 20px);
-            display: flex; 
-            flex-direction: column; 
-            color: white; 
-        }
-
-        /* --- ELEMENTOS DE LA INTERFAZ --- */
-        .gps-status-bar, .server-status-bar, .grid-row {
-            flex-shrink: 0; 
-        }
-
-        .content-area { 
-            background-color: #1a3a70; 
-            border: 1px solid white; 
-            border-radius: 5px; 
-            flex: 1; 
-            display: flex; 
-            flex-direction: column; 
-            overflow-y: auto; 
-            min-height: 0; 
-            margin-top: 5px;
-            margin-bottom: 10px; 
-            padding: 15px 10px;
-            /* Permite el scroll solo adentro del formulario, sin arrastrar toda la app */
-            overscroll-behavior: contain;
-        }
-
-        .save-btn { 
-            background-color: #ffffff; 
-            color: #4e7a3a; 
-            border: 2px solid white; 
-            padding: 15px; 
-            width: 100%; 
-            font-size: 18px; 
-            font-weight: bold; 
-            border-radius: 12px; 
-            cursor: pointer; 
-            text-transform: uppercase; 
-            box-shadow: 0 -4px 15px rgba(0,0,0,0.3); 
-            flex-shrink: 0; 
-            height: 60px;   
+        .container {
+            width: 100%;
+            max-width: 480px;
+            height: 100%;
+            margin: 0 auto;
+            padding: 12px;
+            padding-bottom: env(safe-area-inset-bottom, 16px);
             display: flex;
-            align-items: center;
-            justify-content: center;
-            /* Previene el zoom al hacer tap repetidamente */
-            touch-action: manipulation;
+            flex-direction: column;
+            gap: 10px;
+            color: var(--navy);
         }
 
-        /* --- ESTILOS DECORATIVOS --- */
-        .gps-status-bar { background: rgba(0,0,0,0.5); color: #00ff2b; font-size: 10px; padding: 5px; border-radius: 5px; margin-bottom: 5px; display: flex; justify-content: space-between; border: 1px solid rgba(255,255,255,0.2); }
-        .gps-searching { color: #ffcc00; }
-        .server-status-bar { padding: 12px; margin-bottom: 8px; border-radius: 5px; font-weight: bold; font-size: 14px; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.3); transition: background-color 0.3s ease; text-align: center; }
-        .server-loading { background-color: #ff9800; color: white; }
-        .server-online { background-color: #28a745; color: white; }
-        .server-offline { background-color: #dc3545; color: white; }
-        .server-syncing { background-color: #007bff; color: white; }
-        
-        .grid-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; width: 100%; }
-        .label-box { border: 1px solid white; padding: 8px; font-size: 14px; font-weight: bold; text-transform: uppercase; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.1); height: 40px; }
-        
-        select, input[type="text"] { width: 100%; padding: 8px; border: 1px solid #1a3a70; background-color: white; height: 45px; font-weight: bold; font-size: 16px; color: black; touch-action: manipulation; }
-        
-        .form-mantenimiento-row { display: grid; grid-template-columns: 1fr 2fr; margin-bottom: 12px; gap: 2px; }
-        .form-label { background-color: #4a76c0; border: 1px solid white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; text-transform: uppercase; }
-        .form-title { text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 20px; text-transform: uppercase; border-bottom: 1px solid white; padding-bottom: 10px;}
+        /* --- Cabecera: marca + GPS --- */
+        .header-card {
+            background: var(--tarjeta);
+            border: 1px solid var(--borde);
+            border-radius: var(--radio);
+            padding: 12px 16px;
+            flex-shrink: 0;
+        }
+        .brand {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+        .brand .logo-text {
+            font-size: 20px;
+            font-weight: 900;
+            font-style: italic;
+            color: var(--navy-oscuro);
+        }
+        .brand .brand-sub {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: var(--navy);
+            text-transform: uppercase;
+        }
+        .gps-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .gps-row .gps-label { color: var(--navy); text-transform: uppercase; }
+        .gps-row .gps-label.buscando { color: var(--naranja); }
+        .gps-row .gps-coords { color: var(--navy-oscuro); font-weight: 800; }
+
+        /* --- Pill de estado del servidor --- */
+        .server-status-bar {
+            border-radius: var(--radio);
+            padding: 12px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: .5px;
+            text-transform: uppercase;
+            border: 1px solid var(--borde);
+            transition: all .3s ease;
+            flex-shrink: 0;
+        }
+        .server-online  { background: var(--verde-suave); color: var(--verde);    border-color: #bfe5d0; }
+        .server-offline { background: var(--rojo-suave);  color: var(--rojo);     border-color: #f3c9c9; }
+        .server-syncing { background: var(--azul-suave);  color: var(--azul-sync);border-color: #c4dcf8; }
+        .server-loading { background: #fdf3e3;            color: var(--naranja);  border-color: #f0ddb8; }
+
+        /* --- Hora / Fecha --- */
+        .grid-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .info-card {
+            background: var(--tarjeta);
+            border: 1px solid var(--borde);
+            border-radius: var(--radio);
+            padding: 14px 8px;
+            text-align: center;
+        }
+        .info-card .valor {
+            font-size: 24px;
+            font-weight: 900;
+            color: var(--navy-oscuro);
+            font-variant-numeric: tabular-nums;
+        }
+        .info-card .etiqueta {
+            font-size: 12px;
+            color: var(--gris-texto);
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        /* --- Cronómetro --- */
+        .timer-card {
+            background: var(--tarjeta);
+            border: 1px solid var(--borde);
+            border-radius: var(--radio);
+            width: 100%;
+            padding: 20px 16px;
+            text-align: center;
+            box-shadow: 0 4px 14px rgba(13, 58, 117, 0.08);
+            flex-shrink: 0;
+        }
+        .timer-card .timer-label {
+            display: inline-block;
+            background: var(--navy);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 6px 16px;
+            border-radius: 999px;
+            margin-bottom: 14px;
+        }
+        .timer-card .timer-valor {
+            font-size: 44px;
+            font-weight: 900;
+            color: var(--navy-oscuro);
+            font-variant-numeric: tabular-nums;
+            line-height: 1;
+        }
+        .timer-card .timer-sub {
+            font-size: 12px;
+            color: var(--gris-texto);
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        /* --- Lista de coordenadas --- */
+        .lista-card {
+            background: var(--tarjeta);
+            border: 1px solid var(--navy);
+            border-radius: var(--radio);
+            flex: 1;
+            min-height: 0;            /* permite que el scroll interno funcione */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .lista-header {
+            padding: 10px 14px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: .5px;
+            text-transform: uppercase;
+            color: var(--navy);
+            border-bottom: 1px solid var(--borde);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .lista-header .lista-contador {
+            color: var(--gris-texto);
+            font-weight: 700;
+            text-transform: none;
+        }
+        .lista-body {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 4px 14px 12px;
+        }
+        .lista-vacia {
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--gris-texto);
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .coord-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 2px;
+            border-bottom: 1px dashed var(--borde);
+            font-size: 13px;
+        }
+        .coord-hora {
+            color: var(--gris-texto);
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            flex-shrink: 0;
+        }
+        .coord-valor {
+            color: var(--navy-oscuro);
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            flex: 1;
+            text-align: center;
+        }
+        .coord-estado {
+            flex-shrink: 0;
+            font-size: 12px;
+            font-weight: 800;
+        }
+        .coord-estado.pendiente { color: var(--naranja); }
+        .coord-estado.enviado   { color: var(--verde); }
     </style>
 </head>
 <body onload="iniciarSistema()">
     <div class="container">
-        <div class="gps-status-bar" id="gpsBar">
-            <span id="gpsLabel">📍 GPS: BUSCANDO SEÑAL...</span>
-            <span id="gpsCoords">---, ---</span>
+
+        <div class="header-card">
+            <div class="brand">
+                <span class="logo-text">AIR</span>
+                <span class="brand-sub">Control</span>
+            </div>
+            <div class="gps-row" id="gpsBar">
+                <span class="gps-label buscando" id="gpsLabel">📍 GPS: Buscando señal...</span>
+                <span class="gps-coords" id="gpsCoords">---, ---</span>
+            </div>
         </div>
 
         <div id="serverStatus" class="server-status-bar server-loading">
-            🟠 INICIANDO SISTEMA...
+            🟠 Iniciando sistema...
         </div>
 
-        <input type="hidden" id="tempLat" value="0.000000">
-        <input type="hidden" id="tempLon" value="0.000000">
-        
         <div class="grid-row">
-            <div id="txtHora" class="label-box">--:--:--</div>
-            <div id="txtFecha" class="label-box">--/--/----</div>
-        </div>
-
-        <div class="content-area">
-            <div class="form-title">REGISTRO DE NUEVO EQUIPO</div>
-            
-            <div class="form-mantenimiento-row">
-                <div class="form-label">MARCA</div>
-                <div>
-                    <select id="new_marca" onchange="guardarBorradorFormulario()">
-                        <option value=""></option>
-                        <option value="GPS">GPS</option>
-                        <option value="ECUASINO">ECUASINO</option>
-                        <option value="COSUMISA">COSUMISA</option>
-                        <option value="MOAF MADAM">MOAF MADAM</option>
-                        <option value="CHANGFA">CHANGFA</option>
-                    </select>
-                </div>
+            <div class="info-card">
+                <div class="valor" id="txtHora">--:--:--</div>
+                <div class="etiqueta">Hora</div>
             </div>
-            <div class="form-mantenimiento-row">
-                <div class="form-label">MODELO</div>
-                <div>
-                    <select id="new_modelo" onchange="guardarBorradorFormulario()">
-                        <option value=""></option>
-                        <option value="2 HP">2 HP</option>
-                        <option value="3 HP">3 HP</option>
-                        <option value="3.5 HP">3.5 HP</option>
-                        <option value="4 HP">4 HP</option>
-                        <option value="5 HP">5 HP</option>
-                        <option value="5.5 HP">5.5 HP</option>
-                        <option value="6 HP">6 HP</option>
-                        <option value="16 HP">16 HP</option>
-                    </select>
-                </div>
-            </div>
-            <div class="form-mantenimiento-row">
-                <div class="form-label">SERIE</div>
-                <div><input type="text" id="new_serie" oninput="guardarBorradorFormulario()"></div>
-            </div>
-            <div class="form-mantenimiento-row">
-                <div class="form-label">TIPO</div>
-                <div>
-                    <select id="new_tipo" onchange="actualizarPrefijoID(); guardarBorradorFormulario()">
-                        <option value=""></option>
-                        <option value="ELECTRICO">ELECTRICO</option>
-                        <option value="MECANICO">MECANICO</option>
-                    </select>
-                </div>
-            </div>
-            <div class="form-mantenimiento-row">
-                <div class="form-label">UBICACION</div>
-                <div>
-                    <select id="new_ubicacion" onchange="guardarBorradorFormulario()">
-                        </select>
-                </div>
-            </div>
-            <div class="form-mantenimiento-row">
-                <div class="form-label">ID_AIR</div>
-                <div><input type="text" id="new_id_air" oninput="guardarBorradorFormulario()"></div>
+            <div class="info-card">
+                <div class="valor" id="txtFecha">--/--/----</div>
+                <div class="etiqueta">Fecha</div>
             </div>
         </div>
 
-        <button class="save-btn" onclick="confirmarRegistro()">GUARDAR AIREADOR</button>
+        <div class="timer-card">
+            <div class="timer-label">Tiempo de rastreo</div>
+            <div class="timer-valor" id="cronometro">00:00:00</div>
+            <div class="timer-sub" id="resumenRegistros">0 puntos registrados · 0 pendientes</div>
+        </div>
+
+        <div class="lista-card">
+            <div class="lista-header">
+                <span>Lista de coordenadas</span>
+                <span class="lista-contador" id="listaContador">0 puntos</span>
+            </div>
+            <div class="lista-body" id="listaBody">
+                <div class="lista-vacia" id="listaVacia">Esperando primera coordenada...</div>
+            </div>
+        </div>
     </div>
 
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxGLuClr5EfG0Yx8Sp1uxf6HN0qvcnGxmmn8GfXb8FAdr05lIt96OOJkJi0NVKksq8e/exec";
+    "use strict";
 
-        let ultimaLat = "0.000000", ultimaLon = "0.000000";
-        let wb; 
-        let datosAires = []; 
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbySvbR0d_3v-IL0E_plszAPgWo9jSP4DKsC9yvx8i5CRP1KLZZPaLTqDoLDOKQ2nr4mhA/exec";
 
-        // --- NUEVO: BLOQUEO DEL BOTÓN DE RETROCESO ---
-        function anularBotonAtras() {
-            // Empuja el estado actual al historial
+    // Claves de almacenamiento local
+    const KEY_COLA       = 'pendingTracking';  // registros aún no confirmados por el servidor
+    const KEY_HISTORIAL  = 'trackingLocal';    // respaldo local (limitado) de puntos enviados
+    const KEY_LOCALDB    = 'localDB';          // datos iniciales descargados del servidor
+
+    const MAX_HISTORIAL  = 2000;   // tope de filas guardadas localmente (evita llenar localStorage)
+    const LOTE_MAXIMO    = 50;     // filas por envío al servidor
+    const INTERVALO_GPS  = 30000;  // ms entre puntos de rastreo
+    const INTERVALO_SYNC = 60000;  // ms entre reintentos de sincronización
+
+    let ultimaLat = null, ultimaLon = null;
+    let datosAires = [];
+    let appStartTime = Date.now();
+    let totalRegistrados = 0;
+
+    /* ============================================================
+       MEJORA 5: cola sin condiciones de carrera.
+       Un único candado (sincronizando) y helpers que SIEMPRE
+       releen localStorage antes de modificarlo. Las filas nuevas
+       se agregan al final y la sincronización consume del frente,
+       por lo que nunca se pisan entre sí.
+       ============================================================ */
+    let sincronizando = false;
+
+    const obtenerCola = () => JSON.parse(localStorage.getItem(KEY_COLA) || '[]');
+    const guardarCola = (c) => localStorage.setItem(KEY_COLA, JSON.stringify(c));
+
+    function encolarFila(fila) {
+        const cola = obtenerCola();
+        cola.push(fila);
+        guardarCola(cola);
+        agregarEntradaLista(fila, 'pendiente');
+        actualizarResumen();
+    }
+
+    /* ============================================================
+       MEJORA 2: confirmación real del servidor.
+       Se elimina mode:"no-cors". Apps Script (desplegado con acceso
+       "Cualquier persona" y respondiendo con ContentService) sí
+       devuelve cabeceras CORS, así que podemos leer la respuesta y
+       solo vaciar la cola cuando el servidor confirma {ok:true}.
+       ============================================================ */
+    async function enviarLote(filas) {
+        try {
+            const resp = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // simple request: sin preflight
+                body: JSON.stringify({ tipo: 'TRACKING_DELTA', filas: filas })
+            });
+            if (!resp.ok) return false;
+            const r = await resp.json();
+            return r && r.ok === true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    /* ============================================================
+       MEJORA 3: envío por deltas.
+       Ya no se reenvía el libro completo cada 30 s: solo las filas
+       nuevas de TRACKING, en lotes. El historial local se limita a
+       MAX_HISTORIAL filas, así localStorage nunca se desborda.
+       ============================================================ */
+    async function sincronizar() {
+        if (sincronizando || !navigator.onLine) return;
+
+        const colaInicial = obtenerCola();
+        if (colaInicial.length === 0) {
+            actualizarEstadoUI();
+            return;
+        }
+
+        sincronizando = true;
+        mostrarEstado('syncing', `🔄 Sincronizando (${colaInicial.length} pendientes)...`);
+
+        try {
+            while (true) {
+                const cola = obtenerCola();
+                if (cola.length === 0) break;
+
+                const lote = cola.slice(0, LOTE_MAXIMO);
+                const ok = await enviarLote(lote);
+
+                if (!ok) {
+                    mostrarEstado('offline', `⚠️ Error al subir (${obtenerCola().length} pendientes, se reintentará)`);
+                    return;
+                }
+
+                // Releer la cola: el rastreador pudo agregar filas mientras enviábamos.
+                const colaActual = obtenerCola();
+                guardarCola(colaActual.slice(lote.length));
+                agregarAlHistorial(lote);
+                marcarEnviadasUI(lote.length);
+                actualizarResumen();
+            }
+            mostrarEstado('online', '🟢 Conexión con servidor: OK');
+        } finally {
+            sincronizando = false;
+            actualizarResumen();
+        }
+    }
+
+    function agregarAlHistorial(filas) {
+        let hist = JSON.parse(localStorage.getItem(KEY_HISTORIAL) || '[]');
+        hist.push(...filas);
+        if (hist.length > MAX_HISTORIAL) hist = hist.slice(-MAX_HISTORIAL);
+        localStorage.setItem(KEY_HISTORIAL, JSON.stringify(hist));
+        totalRegistrados = hist.length + obtenerCola().length;
+    }
+
+    /* ============================================================
+       MEJORA 1: Wake Lock para que la pantalla no se apague
+       (los navegadores suspenden el GPS y los timers con la
+       pantalla apagada). Se re-solicita al volver a primer plano.
+       ============================================================ */
+    let wakeLock = null;
+    async function solicitarWakeLock() {
+        try {
+            if ('wakeLock' in navigator) {
+                wakeLock = await navigator.wakeLock.request('screen');
+                console.log('🔆 Wake Lock activo: la pantalla no se apagará.');
+            }
+        } catch (e) {
+            console.warn('Wake Lock no disponible:', e.message);
+        }
+    }
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            solicitarWakeLock();
+            sincronizar();
+        }
+    });
+
+    /* ============================================================
+       MEJORA 4: Service Worker como archivo real (sw.js) en lugar
+       de un Blob URL (incompatible en varios navegadores).
+       ============================================================ */
+    function instalarServiceWorker() {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(() => console.log('⚙️ Service Worker activo.'))
+                .catch(err => console.warn('SW error:', err));
+        }
+    }
+
+    /* ============================================================
+       PROTECCIONES (se mantienen del diseño original)
+       ============================================================ */
+    function anularBotonAtras() {
+        window.history.pushState(null, null, window.location.href);
+        window.addEventListener('popstate', () => {
             window.history.pushState(null, null, window.location.href);
-            
-            // Si el usuario presiona "Atrás", interceptamos y volvemos a empujar el estado
-            window.addEventListener('popstate', function(event) {
-                window.history.pushState(null, null, window.location.href);
-                // Opcional: Descomentar para mostrar alerta
-                // alert("⚠️ Por seguridad de los datos, no se permite usar el botón de atrás.");
-            });
-        }
-
-        // --- NUEVO: MANIFEST DINÁMICO PARA INSTALACIÓN A PANTALLA COMPLETA ---
-        function instalarManifestStandalone() {
-            const manifestData = {
-                "name": "Registro Aireadores",
-                "short_name": "Aireadores",
-                "start_url": window.location.href.split('?')[0],
-                "display": "standalone",
-                "background_color": "#4a76c0",
-                "theme_color": "#4a76c0",
-                "orientation": "portrait"
-            };
-            
-            const stringManifest = JSON.stringify(manifestData);
-            const blob = new Blob([stringManifest], {type: 'application/json'});
-            const manifestURL = URL.createObjectURL(blob);
-            
-            const link = document.createElement('link');
-            link.rel = 'manifest';
-            link.href = manifestURL;
-            document.head.appendChild(link);
-        }
-
-        function guardarCodigoEnMemoria() {
-            if ('caches' in window) {
-                const cleanUrl = window.location.href.split('#')[0].split('?')[0];
-                caches.open('app-aireadores-core-v1').then(cache => {
-                    cache.addAll([
-                        cleanUrl,
-                        'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js' 
-                    ]).then(() => {
-                        console.log("💾 Código del sistema y librerías guardados en memoria interna.");
-                    });
-                }).catch(e => console.warn("Cache API no disponible.", e));
-            }
-        }
-
-        function instalarServiceWorker() {
-            if ('serviceWorker' in navigator) {
-                const swCode = `
-                    const CACHE_NAME = 'app-aireadores-core-v1';
-                    self.addEventListener('install', e => self.skipWaiting());
-                    self.addEventListener('activate', e => self.clients.claim());
-                    self.addEventListener('fetch', e => {
-                        e.respondWith(
-                            caches.match(e.request).then(response => {
-                                return response || fetch(e.request);
-                            })
-                        );
-                    });
-                `;
-                try {
-                    const blob = new Blob([swCode], { type: 'application/javascript' });
-                    const swUrl = URL.createObjectURL(blob);
-                    navigator.serviceWorker.register(swUrl).then(() => {
-                        console.log("⚙️ Service Worker activo.");
-                    }).catch(err => console.log("SW error", err));
-                } catch(e) {}
-            }
-        }
-
-        function cargarPiscinasPorDefecto() {
-            const select = document.getElementById('new_ubicacion');
-            select.innerHTML = '<option value="">-- SELECCIONE --</option>';
-            
-            for(let i = 1; i <= 44; i++) {
-                let o = document.createElement('option');
-                o.value = "PRECRIA " + i; o.textContent = "PRECRIA " + i;
-                select.appendChild(o);
-            }
-            for(let i = 1; i <= 95; i++) {
-                let o = document.createElement('option');
-                o.value = "PISCINA " + i; o.textContent = "PISCINA " + i;
-                select.appendChild(o);
-            }
-        }
-
-        function guardarBorradorFormulario() {
-            const borrador = {
-                marca: document.getElementById('new_marca').value,
-                modelo: document.getElementById('new_modelo').value,
-                serie: document.getElementById('new_serie').value,
-                tipo: document.getElementById('new_tipo').value,
-                ubicacion: document.getElementById('new_ubicacion').value,
-                id_air: document.getElementById('new_id_air').value
-            };
-            localStorage.setItem('borradorNuevoAireador', JSON.stringify(borrador));
-        }
-
-        setInterval(guardarBorradorFormulario, 5000);
-
-        function restaurarBorradorFormulario() {
-            const borradorGuardado = localStorage.getItem('borradorNuevoAireador');
-            if (borradorGuardado) {
-                try {
-                    const b = JSON.parse(borradorGuardado);
-                    document.getElementById('new_marca').value = b.marca || "";
-                    document.getElementById('new_modelo').value = b.modelo || "";
-                    document.getElementById('new_serie').value = b.serie || "";
-                    document.getElementById('new_tipo').value = b.tipo || "";
-                    document.getElementById('new_ubicacion').value = b.ubicacion || "";
-                    document.getElementById('new_id_air').value = b.id_air || "";
-                } catch(e) {}
-            }
-        }
-
-        window.addEventListener('keydown', (e) => {
-            const pendientes = localStorage.getItem('pendingPayloads');
-            const hayPendientes = pendientes && JSON.parse(pendientes).length > 0;
-
-            if (e.key === 'F5' || (e.ctrlKey && e.key === 'r') || (e.metaKey && e.key === 'r')) {
-                e.preventDefault();
-                if (!navigator.onLine || hayPendientes) {
-                    alert("⛔ RECARGA BLOQUEADA EN MODO OFFLINE ⛔\n\nTienes registros sin sincronizar en la memoria local. Refrescar la página ahora causará la PÉRDIDA DE DATOS.");
-                } else {
-                    alert("⛔ RECARGA BLOQUEADA\n\nPor seguridad, la recarga manual está deshabilitada.");
-                }
-            }
         });
+    }
 
-        window.addEventListener('beforeunload', (event) => {
-            guardarBorradorFormulario();
-            const pendientes = localStorage.getItem('pendingPayloads');
-            const hayPendientes = pendientes && JSON.parse(pendientes).length > 0;
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'r')) {
+            e.preventDefault();
+            const pendientes = obtenerCola().length;
+            alert(pendientes > 0
+                ? `⛔ RECARGA BLOQUEADA\n\nTienes ${pendientes} registros sin sincronizar.`
+                : '⛔ RECARGA BLOQUEADA\n\nPor seguridad, la recarga manual está deshabilitada.');
+        }
+    });
 
-            if (!navigator.onLine || hayPendientes) {
-                const mensaje = "⚠️ ¡ALERTA CRÍTICA! Estás en MODO OFFLINE o tienes datos sin sincronizar. Si sales ahora, PODRÍAS PERDER TUS REGISTROS. ¿Seguro que deseas salir?";
-                event.preventDefault();
-                event.returnValue = mensaje;
-                return mensaje;
-            }
-        });
+    window.addEventListener('beforeunload', (event) => {
+        if (!navigator.onLine || obtenerCola().length > 0) {
+            event.preventDefault();
+            event.returnValue = '⚠️ Tienes datos sin sincronizar.';
+            return event.returnValue;
+        }
+    });
 
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'hidden') {
-                guardarBorradorFormulario();
-            }
-        });
+    /* ============================================================
+       CONEXIÓN
+       ============================================================ */
+    window.addEventListener('online', () => {
+        sincronizar();
+        if (obtenerCola().length === 0) cargarDatosEnSegundoPlano();
+    });
 
-        const delay = ms => new Promise(res => setTimeout(res, ms));
+    window.addEventListener('offline', () => {
+        mostrarEstado('offline', `⚠️ Modo offline (${obtenerCola().length} pendientes)`);
+    });
 
-        window.addEventListener('online', async () => {
-            const statusDiv = document.getElementById('serverStatus');
-            const pendientes = localStorage.getItem('pendingPayloads');
-            
-            if (pendientes && JSON.parse(pendientes).length > 0) {
-                statusDiv.innerText = "🌐 INTERNET RESTAURADO: INICIANDO SYNC...";
-                statusDiv.className = "server-status-bar server-syncing";
-                await delay(2000); 
-                autoSyncPendientes();
-            } else {
-                statusDiv.innerText = "🟢 CONEXIÓN OK";
-                statusDiv.className = "server-status-bar server-online";
-                cargarDatosEnSegundoPlano();
-            }
-        });
+    /* ============================================================
+       INICIO
+       ============================================================ */
+    async function iniciarSistema() {
+        anularBotonAtras();
+        instalarServiceWorker();
+        solicitarWakeLock();
+        gestionarGPSPersistente();
 
-        window.addEventListener('offline', () => {
-            const statusDiv = document.getElementById('serverStatus');
-            statusDiv.innerText = "⚠️ MODO OFFLINE (Borrador Activo)";
-            statusDiv.className = "server-status-bar server-offline";
-        });
+        const hist = JSON.parse(localStorage.getItem(KEY_HISTORIAL) || '[]');
+        totalRegistrados = hist.length + obtenerCola().length;
+        restaurarLista(hist);
 
-        async function iniciarSistema() {
-            // EJECUTA LAS DOS NUEVAS FUNCIONES AL ABRIR LA APP
-            anularBotonAtras(); 
-            instalarManifestStandalone(); 
-
-            guardarCodigoEnMemoria(); 
-            instalarServiceWorker();  
-
-            cargarPiscinasPorDefecto(); 
-            restaurarBorradorFormulario(); 
-            gestionarGPSPersistente(); 
-            
-            const localData = localStorage.getItem('localDB');
-            const statusDiv = document.getElementById('serverStatus');
-            
-            if (localData) {
-                procesarDatosJSON(JSON.parse(localData));
-                statusDiv.innerText = navigator.onLine ? "🟢 LISTO (Datos Locales Cargados)" : "⚠️ MODO OFFLINE ACTIVO";
-                statusDiv.className = navigator.onLine ? "server-status-bar server-online" : "server-status-bar server-offline";
-            } else {
-                statusDiv.innerText = "🔴 SIN DATOS INICIALES. NECESITA INTERNET 1 VEZ.";
-                statusDiv.className = "server-status-bar server-offline";
-            }
-
-            if (navigator.onLine) {
-                const pendientes = localStorage.getItem('pendingPayloads');
-                if (pendientes && JSON.parse(pendientes).length > 0) {
-                    await autoSyncPendientes();
-                } else {
-                    cargarDatosEnSegundoPlano();
-                }
-            }
+        const localData = localStorage.getItem(KEY_LOCALDB);
+        if (localData) {
+            procesarDatosJSON(JSON.parse(localData));
+            actualizarEstadoUI();
+        } else if (!navigator.onLine) {
+            mostrarEstado('offline', '🔴 Sin datos iniciales. Necesita internet 1 vez.');
         }
 
-        async function autoSyncPendientes() {
-            const pendientes = localStorage.getItem('pendingPayloads');
-            if (pendientes) {
-                const statusDiv = document.getElementById('serverStatus');
-                statusDiv.innerText = "🔵 SUBIENDO REGISTROS A LA NUBE...";
-                statusDiv.className = "server-status-bar server-syncing";
-                
-                let cola = JSON.parse(pendientes);
-                let errores = 0;
-
-                while (cola.length > 0) {
-                    const item = cola[0];
-                    try {
-                        await fetch(SCRIPT_URL, {
-                            method: "POST",
-                            mode: "no-cors",
-                            headers: { "Content-Type": "text/plain" },
-                            body: JSON.stringify(item)
-                        });
-                        cola.shift(); 
-                        localStorage.setItem('pendingPayloads', JSON.stringify(cola));
-                    } catch (e) {
-                        errores++;
-                        break; 
-                    }
-                }
-
-                if (cola.length === 0) {
-                    localStorage.removeItem('pendingPayloads');
-                    statusDiv.innerText = "✅ SINCRONIZACIÓN EXITOSA";
-                    statusDiv.className = "server-status-bar server-online";
-                    await delay(2000);
-                    cargarDatosEnSegundoPlano(); 
-                } else if (errores > 0) {
-                    statusDiv.innerText = "⚠️ ERROR AL SUBIR (Reintentando pronto)";
-                    statusDiv.className = "server-status-bar server-offline";
-                }
-            }
+        if (navigator.onLine) {
+            await sincronizar();
+            cargarDatosEnSegundoPlano();
         }
 
-        async function cargarDatosEnSegundoPlano() {
-            if (!navigator.onLine) return;
-            const statusDiv = document.getElementById('serverStatus');
-            try {
-                const ts = new Date().getTime();
-                const response = await fetch(`${SCRIPT_URL}?t=${ts}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    localStorage.setItem('localDB', JSON.stringify(data));
-                    procesarDatosJSON(data);
-                    if(!localStorage.getItem('pendingPayloads')) {
-                        statusDiv.innerText = "🟢 LISTO PARA REGISTRAR";
-                        statusDiv.className = "server-status-bar server-online";
-                    }
-                }
-            } catch (e) {
-                console.warn("Actualización en segundo plano falló.");
-            }
-        }
-
-        function procesarDatosJSON(data) {
-            wb = XLSX.utils.book_new();
-            wb.SheetNames = Object.keys(data);
-            wb.SheetNames.forEach(name => {
-                const ws = XLSX.utils.aoa_to_sheet(data[name]);
-                wb.Sheets[name] = ws;
-            });
-
-            if (!wb.Sheets["Hoja 3"]) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([[]]), "Hoja 3");
-            if (!wb.Sheets["MOV_AIR"]) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([[]]), "MOV_AIR");
-
-            datosAires = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false });
-        }
-
-        function gestionarGPSPersistente() {
-            if (!navigator.geolocation) return;
-            navigator.geolocation.watchPosition(
-                (pos) => {
-                    ultimaLat = pos.coords.latitude.toFixed(6);
-                    ultimaLon = pos.coords.longitude.toFixed(6);
-                    document.getElementById('tempLat').value = ultimaLat;
-                    document.getElementById('tempLon').value = ultimaLon;
-                    document.getElementById('gpsLabel').innerText = "📍 GPS: SEÑAL FIJADA";
-                    document.getElementById('gpsBar').classList.remove('gps-searching');
-                    document.getElementById('gpsCoords').innerText = `${ultimaLat}, ${ultimaLon}`;
-                },
-                () => {
-                    document.getElementById('gpsLabel').innerText = "⚠️ BUSCANDO SATÉLITES...";
-                    document.getElementById('gpsBar').classList.add('gps-searching');
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-            );
-        }
-
-        function getFechaActual() {
-            const d = new Date();
-            const dia = d.getDate().toString().padStart(2, '0');
-            const mes = (d.getMonth() + 1).toString().padStart(2, '0');
-            const anio = d.getFullYear();
-            return `'${dia}/${mes}/${anio}`;
-        }
-
-        function getHoraActual() {
-            const d = new Date();
-            const horas = d.getHours().toString().padStart(2, '0');
-            const minutos = d.getMinutes().toString().padStart(2, '0');
-            const segundos = d.getSeconds().toString().padStart(2, '0');
-            return `'${horas}:${minutos}:${segundos}`;
-        }
-
-        function actualizarReloj() {
-            const ahora = new Date();
-            const h = ahora.getHours().toString().padStart(2, '0');
-            const m = ahora.getMinutes().toString().padStart(2, '0');
-            const s = ahora.getSeconds().toString().padStart(2, '0');
-            const dia = ahora.getDate().toString().padStart(2, '0');
-            const mes = (ahora.getMonth() + 1).toString().padStart(2, '0');
-            const anio = ahora.getFullYear();
-            
-            document.getElementById('txtHora').innerText = `${h}:${m}:${s}`;
-            document.getElementById('txtFecha').innerText = `${dia}/${mes}/${anio}`;
-        }
-
+        iniciarRastreador();
+        setInterval(sincronizar, INTERVALO_SYNC);   // reintento periódico
+        setInterval(actualizarCronometro, 1000);
         setInterval(actualizarReloj, 1000);
         actualizarReloj();
+        actualizarResumen();
+    }
 
-        function actualizarPrefijoID() {
-            const tipo = document.getElementById('new_tipo').value;
-            const inputID = document.getElementById('new_id_air');
-            if (tipo === "ELECTRICO") inputID.value = "AIRELEC-SO";
-            else if (tipo === "MECANICO") inputID.value = "AIRMEC-SO";
-            else inputID.value = "";
-            inputID.focus();
-        }
-
-        async function confirmarRegistro() {
-            const idAir = document.getElementById('new_id_air').value.trim();
-            const marca = document.getElementById('new_marca').value;
-            
-            if (!idAir || !marca) {
-                return alert("⚠️ Por favor, complete al menos la Marca y el ID del Aireador.");
-            }
-
-            if (confirm(`¿Proceder a registrar el equipo: ${idAir}?`)) {
-                
-                const lat = document.getElementById('tempLat').value;
-                const lon = document.getElementById('tempLon').value;
-                const fechaActualFormat = getFechaActual();
-                const horaActualFormat = getHoraActual();
-
-                let hojaActual = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false });
-                
-                while (hojaActual.length > 0 && (!hojaActual[hojaActual.length - 1] || hojaActual[hojaActual.length - 1].length === 0 || !hojaActual[hojaActual.length - 1][0] || hojaActual[hojaActual.length - 1][0].toString().trim() === "")) {
-                    hojaActual.pop();
+    async function cargarDatosEnSegundoPlano() {
+        if (!navigator.onLine) return;
+        try {
+            const resp = await fetch(`${SCRIPT_URL}?t=${Date.now()}`);
+            if (resp.ok) {
+                const data = await resp.json();
+                localStorage.setItem(KEY_LOCALDB, JSON.stringify(data));
+                procesarDatosJSON(data);
+                if (obtenerCola().length === 0) {
+                    mostrarEstado('online', '🟢 Conexión con servidor: OK');
                 }
+            }
+        } catch (e) { /* sin conexión real: se reintentará */ }
+    }
 
-                hojaActual.push([
-                    idAir, 
-                    document.getElementById('new_serie').value, 
-                    document.getElementById('new_marca').value, 
-                    document.getElementById('new_modelo').value, 
-                    document.getElementById('new_ubicacion').value, 
-                    document.getElementById('new_tipo').value, 
-                    lat, 
-                    lon, 
-                    "", // I
-                    "", // J
-                    fechaActualFormat, // K
-                    horaActualFormat   // L
-                ]);
+    // Los datos del servidor ya llegan como JSON de arrays:
+    // se eliminó la dependencia de SheetJS (XLSX), que solo se
+    // usaba para reconvertir JSON → hoja → JSON.
+    function procesarDatosJSON(data) {
+        const primeraHoja = Object.keys(data)[0];
+        datosAires = primeraHoja ? data[primeraHoja] : [];
+    }
 
-                datosAires = hojaActual;
-                
-                localStorage.removeItem('borradorNuevoAireador');
-                document.getElementById('new_marca').value = "";
-                document.getElementById('new_modelo').value = "";
-                document.getElementById('new_serie').value = "";
-                document.getElementById('new_tipo').value = "";
-                document.getElementById('new_ubicacion').value = "";
-                document.getElementById('new_id_air').value = "";
+    /* ============================================================
+       GPS Y RASTREADOR
+       ============================================================ */
+    function gestionarGPSPersistente() {
+        if (!navigator.geolocation) return;
+        navigator.geolocation.watchPosition(
+            (pos) => {
+                ultimaLat = pos.coords.latitude.toFixed(6);
+                ultimaLon = pos.coords.longitude.toFixed(6);
+                const label = document.getElementById('gpsLabel');
+                label.innerText = '📍 GPS: Señal fijada';
+                label.classList.remove('buscando');
+                document.getElementById('gpsCoords').innerText = `${ultimaLat}, ${ultimaLon}`;
+            },
+            () => {
+                const label = document.getElementById('gpsLabel');
+                label.innerText = '⚠️ Buscando satélites...';
+                label.classList.add('buscando');
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    }
 
-                await aplicarGuardado("✅ ¡Aireador guardado en la memoria del dispositivo!");
+    function iniciarRastreador() {
+        setInterval(() => {
+            if (!ultimaLat || !ultimaLon) return;
+            totalRegistrados++;
+            encolarFila([ultimaLat, ultimaLon, getFechaActual(), getHoraActual()]);
+            sincronizar(); // intenta enviar de inmediato; si falla, queda en cola
+        }, INTERVALO_GPS);
+    }
+
+    /* ============================================================
+       FECHA / HORA / UI
+       ============================================================ */
+    const pad = n => n.toString().padStart(2, '0');
+
+    function getFechaActual() {
+        const d = new Date();
+        return `'${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+    }
+
+    function getHoraActual() {
+        const d = new Date();
+        return `'${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+
+    function actualizarReloj() {
+        const d = new Date();
+        document.getElementById('txtHora').innerText  = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        document.getElementById('txtFecha').innerText = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+    }
+
+    function actualizarCronometro() {
+        const seg = Math.floor((Date.now() - appStartTime) / 1000);
+        const h = pad(Math.floor(seg / 3600));
+        const m = pad(Math.floor((seg % 3600) / 60));
+        const s = pad(seg % 60);
+        document.getElementById('cronometro').innerText = `${h}:${m}:${s}`;
+    }
+
+    function actualizarResumen() {
+        const pendientes = obtenerCola().length;
+        document.getElementById('resumenRegistros').innerText =
+            `${totalRegistrados} puntos registrados · ${pendientes} pendientes`;
+        document.getElementById('listaContador').innerText =
+            `${totalRegistrados} ${totalRegistrados === 1 ? 'punto' : 'puntos'}`;
+        if (!sincronizando) actualizarEstadoUI();
+    }
+
+    /* ============================================================
+       LISTA DE COORDENADAS
+       Cada punto capturado (cada 30 s) se agrega arriba de la lista
+       con su hora y estado: ⏳ pendiente → ✓ enviado al confirmarse.
+       ============================================================ */
+    const MAX_LISTA = 100;            // filas visibles como máximo
+    let entradasPendientesUI = [];    // elementos esperando confirmación
+
+    const sinApostrofe = v => String(v).replace(/^'/, '');
+
+    function agregarEntradaLista(fila, estado) {
+        const body = document.getElementById('listaBody');
+        const vacio = document.getElementById('listaVacia');
+        if (vacio) vacio.remove();
+
+        const div = document.createElement('div');
+        div.className = 'coord-item';
+
+        const hora = document.createElement('span');
+        hora.className = 'coord-hora';
+        hora.textContent = sinApostrofe(fila[3]);
+
+        const valor = document.createElement('span');
+        valor.className = 'coord-valor';
+        valor.textContent = `${fila[0]}, ${fila[1]}`;
+
+        const est = document.createElement('span');
+        est.className = `coord-estado ${estado}`;
+        est.textContent = estado === 'enviado' ? '✓ Enviado' : '⏳ Pendiente';
+
+        div.append(hora, valor, est);
+        body.prepend(div);   // la más reciente siempre arriba
+
+        if (estado === 'pendiente') entradasPendientesUI.push(div);
+
+        // Mantener la lista liviana: se recortan las más antiguas (abajo)
+        while (body.children.length > MAX_LISTA) {
+            body.removeChild(body.lastChild);
+        }
+    }
+
+    function marcarEnviadasUI(cantidad) {
+        for (let i = 0; i < cantidad; i++) {
+            const div = entradasPendientesUI.shift();
+            if (!div) break;
+            const est = div.querySelector('.coord-estado');
+            if (est) {
+                est.className = 'coord-estado enviado';
+                est.textContent = '✓ Enviado';
             }
         }
+    }
 
-        async function aplicarGuardado(msj) {
-            try {
-                wb.Sheets[wb.SheetNames[0]] = XLSX.utils.aoa_to_sheet(datosAires);
-                
-                let payload = {};
-                wb.SheetNames.forEach(name => {
-                    payload[name] = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true });
-                });
+    function restaurarLista(historial) {
+        // Primero el historial enviado (las últimas MAX_LISTA filas),
+        // luego la cola pendiente; al ir con prepend, lo más nuevo
+        // queda arriba y los pendientes conservan su orden de envío.
+        historial.slice(-MAX_LISTA).forEach(f => agregarEntradaLista(f, 'enviado'));
+        entradasPendientesUI = [];
+        obtenerCola().forEach(f => agregarEntradaLista(f, 'pendiente'));
+    }
 
-                localStorage.setItem('localDB', JSON.stringify(payload));
+    function mostrarEstado(tipo, texto) {
+        const div = document.getElementById('serverStatus');
+        div.innerText = texto;
+        div.className = `server-status-bar server-${tipo}`;
+    }
 
-                if (navigator.onLine) {
-                    try {
-                        await fetch(SCRIPT_URL, {
-                            method: "POST",
-                            mode: "no-cors",
-                            headers: { "Content-Type": "text/plain" },
-                            body: JSON.stringify(payload)
-                        });
-                        if(msj) alert(msj + "\nSincronizado inmediatamente con la nube.");
-                    } catch (e) {
-                        encolarCargaLocal(payload, msj);
-                    }
-                } else {
-                    encolarCargaLocal(payload, msj);
-                }
-
-            } catch (e) {
-                console.error(e);
-                alert("❌ Error al procesar el guardado interno.");
-            }
+    function actualizarEstadoUI() {
+        const pendientes = obtenerCola().length;
+        if (!navigator.onLine) {
+            mostrarEstado('offline', `⚠️ Modo offline (${pendientes} pendientes)`);
+        } else if (pendientes > 0) {
+            mostrarEstado('syncing', `🔄 Sincronizando (${pendientes} pendientes)...`);
+        } else {
+            mostrarEstado('online', '🟢 Conexión con servidor: OK');
         }
-
-        function encolarCargaLocal(payload, msj) {
-            let cola = JSON.parse(localStorage.getItem('pendingPayloads') || "[]");
-            cola.push(payload);
-            localStorage.setItem('pendingPayloads', JSON.stringify(cola));
-            alert(msj + "\n⚠️ Estás trabajando OFFLINE. Se subirá a la nube automáticamente al detectar internet.");
-            
-            const statusDiv = document.getElementById('serverStatus');
-            statusDiv.innerText = `⚠️ MODO OFFLINE (${cola.length} pendientes)`;
-            statusDiv.className = "server-status-bar server-offline";
-        }
+    }
     </script>
 </body>
 </html>
