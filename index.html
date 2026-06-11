@@ -54,6 +54,15 @@
         .gps-row .gps-label.buscando { color: var(--naranja); }
         .gps-row .gps-coords { color: var(--navy-oscuro); font-weight: 800; }
 
+        /* Fila del bloqueo de sesión */
+        .lock-row {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-top: 6px; font-size: 12px; font-weight: 800;
+            color: var(--rojo); text-transform: uppercase;
+        }
+        .lock-row.desbloqueado { color: var(--verde); }
+        .lock-row .lock-restante { font-variant-numeric: tabular-nums; color: var(--navy-oscuro); }
+
         .server-status-bar {
             border-radius: var(--radio); padding: 12px; text-align: center; font-size: 13px; font-weight: 800;
             letter-spacing: .5px; text-transform: uppercase; border: 1px solid var(--borde); transition: all .3s ease; flex-shrink: 0;
@@ -160,6 +169,10 @@
                 <span class="gps-label buscando" id="gpsLabel">📍 GPS: Buscando señal...</span>
                 <span class="gps-coords" id="gpsCoords">---, ---</span>
             </div>
+            <div class="lock-row" id="lockRow">
+                <span id="lockLabel">🔒 Sesión bloqueada</span>
+                <span class="lock-restante" id="lockRestante">--:--:--</span>
+            </div>
         </div>
 
         <div id="serverStatus" class="server-status-bar server-loading">🟠 Iniciando sistema...</div>
@@ -239,7 +252,7 @@
     "use strict";
 
     // 🔴 URL DE GOOGLE APPS SCRIPT ACTUALIZADA
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwNRvdj4eG9TPzQ7Jr8acAO-GCMjwWgze58bw7TxxsLcvuFwBmXLL6G6mkIRDbxxDr8ZA/exec"; 
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxmxGPKwqgvUS9u0Va8wvwlCVeu0aXklSVFOqYrnhGezjkqxOC6V0PjBtV4SREwE4T5Wg/exec"; 
 
     // --- VARIABLES GLOBALES DEL TRACKER ---
     const KEY_COLA       = 'pendingTracking';  
@@ -376,6 +389,104 @@
         } finally {
             sincronizandoNovedades = false;
         }
+    }
+
+    // ============================================================
+    // 🆕 BLOQUEO DE SESIÓN (1.5 HORAS)
+    // Una vez abierta la app, durante 90 minutos:
+    //  - El botón "atrás" del navegador queda atrapado.
+    //  - Cerrar o recargar la pestaña pide confirmación al usuario.
+    //  - El contador persiste en localStorage: recargar NO lo reinicia.
+    // Pasado el tiempo, todo se libera automáticamente.
+    // ============================================================
+    const KEY_LOCK      = 'lockStartTime';
+    const LOCK_DURACION = 90 * 60 * 1000;   // 1.5 horas en milisegundos
+    let bloqueoActivo = false;
+
+    function tiempoRestanteBloqueo() {
+        const inicio = parseInt(localStorage.getItem(KEY_LOCK) || '0', 10);
+        if (!inicio) return 0;
+        return Math.max(0, (inicio + LOCK_DURACION) - Date.now());
+    }
+
+    function manejarBeforeUnload(e) {
+        // Dispara el diálogo nativo "¿Salir del sitio?" del navegador
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+    }
+
+    function manejarPopState() {
+        if (!bloqueoActivo) return;
+        // Re-inyecta el estado para anular el botón "atrás"
+        history.pushState({ bloqueo: true }, '', location.href);
+        mostrarEstado('offline', '🔒 Sesión bloqueada: no es posible salir todavía');
+        setTimeout(actualizarEstadoUI, 2500);
+    }
+
+    // 🆕 Bloquea F5, Ctrl+R y Ctrl+Shift+R mientras la sesión esté bloqueada
+    function bloquearTeclasRecarga(e) {
+        if (!bloqueoActivo) return;
+        const tecla = (e.key || '').toLowerCase();
+        if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && tecla === 'r')) {
+            e.preventDefault();
+            e.stopPropagation();
+            mostrarEstado('offline', '🔒 Recarga deshabilitada durante la sesión');
+            setTimeout(actualizarEstadoUI, 2500);
+        }
+    }
+
+    // 🆕 Si el navegador detecta que la página fue RECARGADA (no abierta
+    // normalmente), se registra el evento con GPS, fecha y hora y se
+    // sube a la hoja de cálculo: cada intento de evasión queda delatado.
+    function registrarRecargaSiAplica() {
+        try {
+            const nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+            if (nav && nav.type === 'reload' && bloqueoActivo) {
+                encolarFila([ultimaLat || '0', ultimaLon || '0', getFechaActual(), getHoraActual(), 'RECARGA DE APP']);
+            }
+        } catch (e) { /* navegadores antiguos sin Navigation Timing 2 */ }
+    }
+
+    function activarBloqueo() {
+        const inicioGuardado = parseInt(localStorage.getItem(KEY_LOCK) || '0', 10);
+        // Si no hay bloqueo previo, o el anterior ya venció,
+        // cada apertura de la app inicia un bloqueo nuevo de 1.5 h.
+        if (!inicioGuardado || (inicioGuardado + LOCK_DURACION) <= Date.now()) {
+            localStorage.setItem(KEY_LOCK, Date.now().toString());
+        }
+        // 🆕 El cronómetro "Tiempo de rastreo" se ancla al inicio real de la
+        // sesión: aunque el usuario recargue la página, NO se reinicia.
+        appStartTime = parseInt(localStorage.getItem(KEY_LOCK), 10);
+
+        bloqueoActivo = true;
+        window.addEventListener('beforeunload', manejarBeforeUnload);
+        window.addEventListener('keydown', bloquearTeclasRecarga, true);   // 🆕 F5 / Ctrl+R bloqueados
+        history.pushState({ bloqueo: true }, '', location.href);
+        window.addEventListener('popstate', manejarPopState);
+        actualizarUIBloqueo();
+    }
+
+    function desactivarBloqueo() {
+        bloqueoActivo = false;
+        window.removeEventListener('beforeunload', manejarBeforeUnload);
+        window.removeEventListener('keydown', bloquearTeclasRecarga, true);
+        window.removeEventListener('popstate', manejarPopState);
+        localStorage.removeItem(KEY_LOCK);
+        appStartTime = Date.now() - (LOCK_DURACION);   // el cronómetro sigue corriendo desde las 1.5 h
+        const row = document.getElementById('lockRow');
+        row.classList.add('desbloqueado');
+        document.getElementById('lockLabel').innerText = '🔓 Sesión desbloqueada';
+        document.getElementById('lockRestante').innerText = '00:00:00';
+    }
+
+    function actualizarUIBloqueo() {
+        if (!bloqueoActivo) return;
+        const restante = tiempoRestanteBloqueo();
+        if (restante <= 0) { desactivarBloqueo(); return; }
+        const seg = Math.floor(restante / 1000);
+        const h = pad(Math.floor(seg / 3600)), m = pad(Math.floor((seg % 3600) / 60)), s = pad(seg % 60);
+        document.getElementById('lockRestante').innerText = `${h}:${m}:${s}`;
     }
 
     // --- COLA Y TRACKING ---
@@ -515,7 +626,9 @@
 
         const div = document.createElement('div'); div.className = 'coord-item';
         const hora = document.createElement('span'); hora.className = 'coord-hora'; hora.textContent = sinApostrofe(fila[3]);
-        const valor = document.createElement('span'); valor.className = 'coord-valor'; valor.textContent = `${fila[0]}, ${fila[1]}`;
+        const valor = document.createElement('span'); valor.className = 'coord-valor';
+        valor.textContent = fila[4] ? `⚠️ ${fila[4]}` : `${fila[0]}, ${fila[1]}`;
+        if (fila[4]) valor.style.color = 'var(--rojo)';
         const est = document.createElement('span'); est.className = `coord-estado ${estado}`; est.textContent = estado === 'enviado' ? '✓ Enviado' : '⏳ Pendiente';
 
         div.append(hora, valor, est); body.prepend(div);   
@@ -562,17 +675,20 @@
     window.addEventListener('online',  () => { actualizarAvisoOffline(); });
 
     async function iniciarSistema() {
+        activarBloqueo();                     // 🆕 bloqueo de sesión de 1.5 horas
         solicitarWakeLock();
         gestionarGPSPersistente();
         const hist = JSON.parse(localStorage.getItem(KEY_HISTORIAL) || '[]');
         totalRegistrados = hist.length + obtenerCola().length;
         restaurarLista(hist);
+        registrarRecargaSiAplica();           // 🆕 delata recargas de página en la hoja de cálculo
         await refrescarContadorNovedades();   // 🆕 leer novedades guardadas de sesiones anteriores
         if (navigator.onLine) await sincronizar(); else actualizarEstadoUI();
         iniciarRastreador();
         setInterval(sincronizar, INTERVALO_SYNC);  
         setInterval(actualizarCronometro, 1000);
         setInterval(actualizarReloj, 1000);
+        setInterval(actualizarUIBloqueo, 1000);   // 🆕 cuenta regresiva del bloqueo
         actualizarReloj(); actualizarResumen();
     }
 
